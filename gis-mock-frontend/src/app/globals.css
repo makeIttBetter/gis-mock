@@ -1,0 +1,14 @@
+/* frontend/src/app/globals.css */
+
+/* Developer note: We rely on Tailwind for responsive,
+   mobile-friendly classes. This file ensures
+   there's a basic white background and black text. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Use a simple, single light theme for now. */
+body {
+    @apply bg-white text-black font-sans;
+}

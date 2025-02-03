@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="load-real-estate-csv-data" author="dev">
+        <loadData
+                file="classpath:liquibase/changelog-v1/data.csv"
+                tableName="real_estate"
+                separator=","
+                encoding="UTF-8">
+
+            <!-- Mapping CSV headers to DB column names -->
+            <column name="id" header="ID"/>
+            <column name="mls_number" header="MLS#"/>
+            <column name="tax_id" header="Tax ID"/>
+            <column name="address" header="Address"/>
+            <column name="city" header="City"/>
+            <column name="state" header="State"/>
+            <column name="zip" header="Zip"/>
+            <column name="status" header="Status"/>
+
+            <column name="short_sale" header="Short Sale"/>
+            <column name="time_uc" header="Time UC"/>
+            <column name="dom" header="DOM"/> <!-- Updated Mapping -->
+
+            <column name="sold_date" header="Sold Date"/>
+            <column name="sold_terms" header="Sold Terms"/>
+            <column name="sold_price" header="Sold Price"/>
+            <column name="sold_concessions" header="Sold Concessions"/>
+            <column name="list_price" header="List Price"/>
+            <column name="original_list_price" header="Original List Price"/>
+            <column name="under_contract_date" header="Under Contract Date"/>
+            <column name="entry_date" header="Entry Date"/>
+            <column name="effective_date_of_listing_agreement" header="Effective Date Of The Listing Agreement"/>
+            <column name="status_change_date" header="Status Change Date"/>
+            <column name="off_market_date" header="Off Market Date"/>
+            <column name="reinstated_date" header="Reinstated Date"/>
+            <column name="cancel_date" header="Cancel Date"/>
+            <column name="offer_under_3rd_party_review" header="Offer Under 3rd Party Review"/>
+            <column name="price_increase_date" header="Price Increase Date"/>
+            <column name="price_increase_days_back" header="Price Increase Days Back"/>
+            <column name="price_reduction_date" header="Price Reduction Date"/>
+            <column name="price_reduction_days_back" header="Price Reduction Days Back"/>
+            <column name="backup_status_date" header="Backup Status Date"/>
+            <column name="withdrawal_date" header="Withdrawal Date"/>
+            <column name="expire_date" header="Expire Date"/>
+            <column name="acres" header="Acres"/>
+            <column name="property_type" header="Property Type"/>
+            <column name="style" header="Style"/>
+            <column name="year_built" header="Year Built"/>
+            <column name="gross_living_area_gla" header="Gross Living Area (GLA)"/>
+            <column name="total_square_feet" header="Total Square Feet"/>
+            <column name="total_bedrooms" header="Total Bedrooms"/>
+            <column name="total_bathrooms" header="Total Bathrooms"/>
+            <column name="total_full_bathrooms" header="Total Full Bathrooms"/>
+            <column name="total_three_quarter_bathrooms" header="Total Three-quarter Bathrooms"/>
+            <column name="total_half_bathrooms" header="Total Half Bathrooms"/>
+            <column name="total_kitchens" header="Total Kitchens"/>
+            <column name="basement_square_feet" header="Basement Square Feet"/>
+            <column name="basement_finished" header="Basement Finished"/>
+            <column name="basement_bedrooms" header="Basement Bedrooms"/>
+            <column name="basement_full_bathrooms" header="Basement Full Bathrooms"/>
+            <column name="basement_three_quarter_bathrooms" header="Basement Three-quarter Bathrooms"/>
+            <column name="basement_half_bathrooms" header="Basement Half Bathrooms"/>
+            <column name="basement" header="Basement"/>
+            <column name="heating" header="Heating"/>
+            <column name="air_conditioning" header="Air Conditioning"/>
+            <column name="garage_capacity" header="Garage Capacity"/>
+            <column name="carport_capacity" header="Carport Capacity"/>
+            <column name="garage_parking" header="Garage/Parking"/>
+            <column name="decks" header="Decks"/>
+            <column name="solar" header="Solar?"/>
+            <column name="solar_ownership" header="Solar Ownership"/>
+            <column name="total_fireplaces" header="Total Fireplaces"/>
+            <column name="landscape" header="Landscape"/>
+
+            <!-- Correctly Mapped Pool Columns -->
+            <column name="pool_available" header="Pool?"/>
+            <column name="pool_details" header="Pool"/>
+
+            <column name="hoa_fee" header="HOA Fee"/>
+            <column name="hoa_amenities" header="HOA Amenities"/>
+            <column name="hoa_remarks" header="HOA Remarks"/>
+            <column name="main_floor_square_feet" header="Main Floor Square Feet"/>
+            <column name="second_floor_square_feet" header="Second Floor Square Feet"/>
+            <column name="third_floor_square_feet" header="Third Floor Square Feet"/>
+            <column name="fourth_floor_square_feet" header="Fourth Floor Square Feet"/>
+            <column name="exterior_features" header="Exterior Features"/>
+            <column name="floor" header="Floor"/>
+            <column name="county" header="County"/>
+            <column name="interior_features" header="Interior Features"/>
+            <column name="public_remarks" header="Public Remarks"/>
+            <column name="bac_compensation" header="BAC Compensation"/>
+            <column name="mls_link" header="MLS Link"/>
+            <column name="quality" header="Quality"/>
+            <column name="condition" header="Condition"/>
+            <column name="location_positive" header="Location +"/>
+            <column name="location_negative" header="Location -"/>
+            <column name="view_positive" header="View +"/>
+            <column name="view_negative" header="View -"/>
+            <column name="adu" header="ADU"/>
+            <column name="remod_update" header="Remod / Update"/>
+            <column name="outbuilding" header="Outbuilding"/>
+            <column name="full_address" header="Full Address"/>
+            <column name="latitude" header="Latitude"/>
+            <column name="longitude" header="Longitude"/>
+            <column name="legal" header="Legal"/>
+            <column name="verified" header="Verified"/>
+            <column name="days_back" header="Days Back"/>
+            <column name="legal_match_to_tax" header="LegalMatchToTax"/>
+            <column name="county_record_link" header="CountyRecordLink"/>
+            <column name="html_body_td" header="/html/body/table/tbody/tr/td/table/tbody/tr[4]/td[2]"/>
+        </loadData>
+    </changeSet>
+
+</databaseChangeLog>

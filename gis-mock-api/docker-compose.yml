@@ -1,0 +1,11 @@
+
+services:
+  gis-mock-api:
+    build: .
+    container_name: gis-mock-api
+    env_file:
+      - .env
+    environment:
+      - JAVA_OPTS=-Xmx512m
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"

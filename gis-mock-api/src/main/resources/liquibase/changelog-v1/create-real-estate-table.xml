@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="create-real-estate-table" author="dev">
+        <createTable tableName="real_estate">
+            <column name="id" type="VARCHAR(36)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Standard Columns -->
+            <column name="mls_number" type="TEXT"/>
+            <column name="tax_id" type="TEXT"/>
+            <column name="address" type="TEXT"/>
+            <column name="city" type="TEXT"/>
+            <column name="state" type="TEXT"/>
+            <column name="zip" type="VARCHAR(20)"/>
+            <column name="status" type="VARCHAR(50)"/>
+
+            <column name="short_sale" type="VARCHAR(50)"/>
+            <column name="time_uc" type="VARCHAR(50)"/>
+            <column name="dom" type="INTEGER"/>
+            <column name="sold_date" type="DATE"/>
+            <column name="sold_terms" type="TEXT"/>
+            <column name="sold_price" type="VARCHAR(50)"/>
+            <column name="sold_concessions" type="VARCHAR(50)"/>
+            <column name="list_price" type="VARCHAR(50)"/>
+            <column name="original_list_price" type="VARCHAR(50)"/>
+            <column name="under_contract_date" type="DATE"/>
+            <column name="entry_date" type="DATE"/>
+            <column name="effective_date_of_listing_agreement" type="DATE"/>
+            <column name="status_change_date" type="DATE"/>
+            <column name="off_market_date" type="DATE"/>
+            <column name="reinstated_date" type="DATE"/>
+            <column name="cancel_date" type="DATE"/>
+            <column name="offer_under_3rd_party_review" type="VARCHAR(10)"/>
+            <column name="price_increase_date" type="DATE"/>
+            <column name="price_increase_days_back" type="INTEGER"/>
+            <column name="price_reduction_date" type="DATE"/>
+            <column name="price_reduction_days_back" type="INTEGER"/>
+            <column name="backup_status_date" type="DATE"/>
+            <column name="withdrawal_date" type="DATE"/>
+            <column name="expire_date" type="DATE"/>
+            <column name="acres" type="DECIMAL(5,2)"/>
+            <column name="property_type" type="VARCHAR(100)"/>
+            <column name="style" type="VARCHAR(100)"/>
+            <column name="year_built" type="INTEGER"/>
+            <column name="gross_living_area_gla" type="INTEGER"/>
+            <column name="total_square_feet" type="INTEGER"/>
+            <column name="total_bedrooms" type="INTEGER"/>
+            <column name="total_bathrooms" type="INTEGER"/>
+            <column name="total_full_bathrooms" type="INTEGER"/>
+            <column name="total_three_quarter_bathrooms" type="INTEGER"/>
+            <column name="total_half_bathrooms" type="INTEGER"/>
+            <column name="total_kitchens" type="INTEGER"/>
+            <column name="basement_square_feet" type="INTEGER"/>
+            <column name="basement_finished" type="BOOLEAN"/>
+            <column name="basement_bedrooms" type="INTEGER"/>
+            <column name="basement_full_bathrooms" type="INTEGER"/>
+            <column name="basement_three_quarter_bathrooms" type="INTEGER"/>
+            <column name="basement_half_bathrooms" type="INTEGER"/>
+            <column name="basement" type="VARCHAR(50)"/>
+            <column name="heating" type="TEXT"/>
+            <column name="air_conditioning" type="TEXT"/>
+            <column name="garage_capacity" type="INTEGER"/>
+            <column name="carport_capacity" type="INTEGER"/>
+            <column name="garage_parking" type="TEXT"/>
+            <column name="decks" type="INTEGER"/>
+            <column name="solar" type="BOOLEAN"/>
+            <column name="solar_ownership" type="VARCHAR(50)"/>
+            <column name="total_fireplaces" type="INTEGER"/>
+            <column name="landscape" type="TEXT"/>
+            <column name="pool_available" type="BOOLEAN"/>
+            <column name="pool_details" type="TEXT"/>
+            <column name="hoa_fee" type="VARCHAR(50)"/>
+            <column name="hoa_amenities" type="TEXT"/>
+            <column name="hoa_remarks" type="TEXT"/>
+            <column name="main_floor_square_feet" type="INTEGER"/>
+            <column name="second_floor_square_feet" type="INTEGER"/>
+            <column name="third_floor_square_feet" type="INTEGER"/>
+            <column name="fourth_floor_square_feet" type="INTEGER"/>
+            <column name="exterior_features" type="TEXT"/>
+            <column name="floor" type="VARCHAR(50)"/>
+            <column name="county" type="VARCHAR(100)"/>
+            <column name="interior_features" type="TEXT"/>
+            <column name="public_remarks" type="TEXT"/>
+            <column name="bac_compensation" type="TEXT"/>
+            <column name="mls_link" type="TEXT"/>
+            <column name="quality" type="TEXT"/>
+            <!-- Increase condition column to hold longer values -->
+            <column name="condition" type="TEXT"/>
+            <!-- Increase location columns -->
+            <column name="location_positive" type="TEXT"/>
+            <column name="location_negative" type="TEXT"/>
+            <!-- Increase view columns -->
+            <column name="view_positive" type="TEXT"/>
+            <column name="view_negative" type="TEXT"/>
+            <column name="adu" type="BOOLEAN"/>
+            <column name="remod_update" type="BOOLEAN"/>
+            <column name="outbuilding" type="BOOLEAN"/>
+            <!-- Increase full_address column -->
+            <column name="full_address" type="TEXT"/>
+            <column name="latitude" type="DECIMAL(38, 20)"/>
+            <column name="longitude" type="DECIMAL(38, 20)"/>
+            <column name="legal" type="TEXT"/>
+            <column name="verified" type="BOOLEAN"/>
+            <column name="days_back" type="INTEGER"/>
+            <column name="legal_match_to_tax" type="BOOLEAN"/>
+            <column name="county_record_link" type="TEXT"/>
+            <column name="html_body_td" type="TEXT"/>
+
+            <!-- Audit Columns -->
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
