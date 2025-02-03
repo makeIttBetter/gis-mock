@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -34,8 +35,7 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
         log.info("Creating real estate: {}", dto);
         RealEstate realEstate = RealEstate.builder()
                 .mlsNumber(dto.getMlsNumber())
-                // Assuming tax_id is not provided from the DTO; set to empty or adjust as needed.
-                .taxId("")
+                .taxId("") // adjust if needed
                 .address(dto.getAddress())
                 .city(dto.getCity())
                 .state(dto.getState())
@@ -100,9 +100,7 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
         realEstateRepository.deleteById(id);
     }
 
-    /**
-     * Additional method: Filtering real estate records by criteria.
-     */
+    // Existing filtering method remains unchanged.
     public List<RealEstateDto> getFilteredRealEstate(RealEstateFilterDto filterDto) {
         log.info("Filtering real estate with filters: {}", filterDto);
         List<RealEstate> all = realEstateRepository.findAll();
@@ -153,14 +151,20 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
         return result;
     }
 
-    /**
-     * Helper method to convert a listPrice string (e.g. "$398,000") to a numeric value.
-     */
+    // NEW: Returns real estate objects for a list of IDs.
+    public List<RealEstateDto> getRealEstateByIds(List<String> ids) {
+        log.info("Fetching real estate records for IDs: {}", ids);
+        List<RealEstate> records = realEstateRepository.findAllByIdIn(ids);
+        return records.stream()
+                .map(realEstateConverter::convert)
+                .collect(Collectors.toList());
+    }
+
+    // Helper method to convert price string (e.g. "$398,000") to numeric value.
     private double parsePrice(String priceStr) throws ParseException {
         if (priceStr == null || priceStr.isEmpty()) {
             return 0.0;
         }
-        // Remove dollar signs and commas
         String cleaned = priceStr.replaceAll("[$,]", "");
         NumberFormat format = NumberFormat.getInstance(Locale.US);
         Number number = format.parse(cleaned);

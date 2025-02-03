@@ -1,4 +1,3 @@
-// File: frontend/src/components/RealEstateList.tsx
 "use client";
 import React from "react";
 import { RealEstate } from "@/interfaces/RealEstate";
@@ -16,6 +15,7 @@ const RealEstateList: React.FC<Props> = ({ realEstates }) => {
                 <ul className="divide-y">
                     {realEstates.map((re) => (
                         <li key={re.id} className="py-2">
+                            <div className="text-xs text-gray-500">ID: {re.id}</div>
                             <div className="font-semibold">{re.address}</div>
                             <div className="text-sm text-gray-600">
                                 {re.city}, {re.state} {re.zip}

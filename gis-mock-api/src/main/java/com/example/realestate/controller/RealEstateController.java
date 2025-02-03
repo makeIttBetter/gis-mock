@@ -5,16 +5,14 @@ import com.example.realestate.dto.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * REST Controller that exposes an endpoint to retrieve real estate data,
- * optionally filtered by query params.
+ * REST Controller that exposes endpoints to retrieve real estate data.
  */
 @Slf4j
 @RestController
@@ -37,7 +35,6 @@ public class RealEstateController {
     ) {
         log.info("GET /api/real-estate?city={}&state={}&status={}&minPrice={}&maxPrice={}",
                 city, state, status, minPrice, maxPrice);
-        // Build filter DTO from query parameters
         RealEstateFilterDto filterDto = new RealEstateFilterDto();
         filterDto.setCity(city);
         filterDto.setState(state);
@@ -45,5 +42,14 @@ public class RealEstateController {
         filterDto.setMinPrice(minPrice);
         filterDto.setMaxPrice(maxPrice);
         return realEstateService.getFilteredRealEstate(filterDto);
+    }
+
+    // NEW: Endpoint to get detailed information for real estate records by a list of IDs.
+    @GetMapping("/attached")
+    public ResponseEntity<List<RealEstateDto>> getAttachedRealEstate(@RequestParam("ids") String ids) {
+        log.info("GET /api/real-estate/attached with ids: {}", ids);
+        List<String> idList = Arrays.asList(ids.split(","));
+        List<RealEstateDto> attachedRecords = realEstateService.getRealEstateByIds(idList);
+        return ResponseEntity.ok(attachedRecords);
     }
 }

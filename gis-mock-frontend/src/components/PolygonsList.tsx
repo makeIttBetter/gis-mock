@@ -1,13 +1,14 @@
-// File: frontend/src/components/PolygonsList.tsx
+// src/components/PolygonsList.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { fetchPolygons, deletePolygon } from "@/lib/polygonApi";
 import { PolygonDTO } from "@/interfaces/PolygonDTO";
 
 export default function PolygonsList() {
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
-    const [expandedPolygonId, setExpandedPolygonId] = useState<number | null>(null);
+    const [expandedPolygonId, setExpandedPolygonId] = useState<string | null>(null);
 
     async function loadData() {
         try {
@@ -33,11 +34,11 @@ export default function PolygonsList() {
         };
     }, []);
 
-    function handleToggleExpand(polygonId: number) {
+    function handleToggleExpand(polygonId: string) {
         setExpandedPolygonId((prev) => (prev === polygonId ? null : polygonId));
     }
 
-    async function handleDelete(id: number) {
+    async function handleDelete(id: string) {
         if (
             window.confirm(
                 "Are you sure you want to delete this polygon and all its relationships?"
@@ -79,6 +80,12 @@ export default function PolygonsList() {
                                 >
                                     {isExpanded ? "Collapse" : "Expand"}
                                 </button>
+                                <Link
+                                    href={`/polygons/${polygon.id}/edit`}
+                                    className="px-3 py-1 bg-green-500 text-white rounded"
+                                >
+                                    Edit ↗
+                                </Link>
                                 <button
                                     onClick={() => handleDelete(polygon.id)}
                                     className="px-3 py-1 bg-red-500 text-white rounded"
