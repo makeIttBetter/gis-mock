@@ -1,14 +1,7 @@
 // File: frontend/src/components/RealEstateFilterForm.tsx
 "use client";
-import React, { useState } from "react";
-
-export interface RealEstateFilterParams {
-    city: string;
-    state: string;
-    status: string;
-    minPrice: string;
-    maxPrice: string;
-}
+import React, { useEffect, useState } from "react";
+import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
 
 interface Props {
     filters: RealEstateFilterParams;
@@ -17,6 +10,11 @@ interface Props {
 
 const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
     const [localFilters, setLocalFilters] = useState<RealEstateFilterParams>(filters);
+
+    // Update local state when the incoming filters prop changes.
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -36,7 +34,7 @@ const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
                     <input
                         type="text"
                         name="city"
-                        value={localFilters.city}
+                        value={localFilters.city || ""}
                         onChange={handleInputChange}
                         className="border rounded p-1"
                     />
@@ -46,7 +44,7 @@ const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
                     <input
                         type="text"
                         name="state"
-                        value={localFilters.state}
+                        value={localFilters.state || ""}
                         onChange={handleInputChange}
                         className="border rounded p-1"
                     />
@@ -55,14 +53,13 @@ const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
                     <label className="block text-sm font-medium">Status</label>
                     <select
                         name="status"
-                        value={localFilters.status}
+                        value={localFilters.status || ""}
                         onChange={handleInputChange}
                         className="border rounded p-1"
                     >
                         <option value="">Any</option>
                         <option value="SOLD">SOLD</option>
                         <option value="AVAILABLE">AVAILABLE</option>
-                        {/* Add more statuses as needed */}
                     </select>
                 </div>
                 <div>
@@ -70,7 +67,7 @@ const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
                     <input
                         type="number"
                         name="minPrice"
-                        value={localFilters.minPrice}
+                        value={localFilters.minPrice || ""}
                         onChange={handleInputChange}
                         className="border rounded p-1"
                     />
@@ -80,7 +77,38 @@ const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
                     <input
                         type="number"
                         name="maxPrice"
-                        value={localFilters.maxPrice}
+                        value={localFilters.maxPrice || ""}
+                        onChange={handleInputChange}
+                        className="border rounded p-1"
+                    />
+                </div>
+                {/* New Filter Fields */}
+                <div>
+                    <label className="block text-sm font-medium">IDs (comma separated)</label>
+                    <input
+                        type="text"
+                        name="ids"
+                        value={localFilters.ids || ""}
+                        onChange={handleInputChange}
+                        className="border rounded p-1"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium">Address</label>
+                    <input
+                        type="text"
+                        name="address"
+                        value={localFilters.address || ""}
+                        onChange={handleInputChange}
+                        className="border rounded p-1"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium">Zipcode</label>
+                    <input
+                        type="text"
+                        name="zipcode"
+                        value={localFilters.zipcode || ""}
                         onChange={handleInputChange}
                         className="border rounded p-1"
                     />

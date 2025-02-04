@@ -1,11 +1,7 @@
-// File: src/main/java/com/example/realestate/dto/RealEstateFilterDto.java
 package com.example.realestate.dto;
 
 import lombok.Data;
 
-/**
- * This DTO holds optional filters that may come from query parameters.
- */
 @Data
 public class RealEstateFilterDto {
     private String city;
@@ -13,4 +9,8 @@ public class RealEstateFilterDto {
     private String status;
     private Double minPrice;
     private Double maxPrice;
+    // New fields:
+    private String ids;       // Comma-separated list of ids
+    private String address;   // Partial or full address search
+    private String zipcode;   // Zipcode filter
 }

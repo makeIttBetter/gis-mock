@@ -1,14 +1,16 @@
+// File: frontend/src/components/RealEstateDashboard.tsx
 "use client";
-import React, {useEffect, useState} from "react";
-import {useRouter, useSearchParams} from "next/navigation";
-import {RealEstate} from "@/interfaces/RealEstate";
-import {fetchAttachedRealEstate, fetchRealEstateData} from "@/lib/realEstateApi";
-import RealEstateFilterForm, {RealEstateFilterParams} from "./RealEstateFilterForm";
+import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { RealEstate } from "@/interfaces/RealEstate";
+import { fetchAttachedRealEstate, fetchRealEstateData } from "@/lib/realEstateApi";
+import RealEstateFilterForm from "./RealEstateFilterForm";
+import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
 import RealEstateList from "./RealEstateList";
 import RealEstateMap from "@/components/map/RealEstateMap";
 import PolygonsList from "./PolygonsList";
-import {createPolygon, fetchPolygons, updatePolygon} from "@/lib/polygonApi";
-import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import { createPolygon, fetchPolygons, updatePolygon } from "@/lib/polygonApi";
+import { PolygonDTO } from "@/interfaces/PolygonDTO";
 
 export default function RealEstateDashboard() {
     const router = useRouter();
@@ -21,6 +23,9 @@ export default function RealEstateDashboard() {
         status: "",
         minPrice: "",
         maxPrice: "",
+        ids: "",
+        address: "",
+        zipcode: "",
     });
     const [realEstates, setRealEstates] = useState<RealEstate[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -45,6 +50,9 @@ export default function RealEstateDashboard() {
             status: params.status || "",
             minPrice: params.minPrice || "",
             maxPrice: params.maxPrice || "",
+            ids: params.ids || "",
+            address: params.address || "",
+            zipcode: params.zipcode || "",
         });
     }, [searchParams]);
 
@@ -100,15 +108,15 @@ export default function RealEstateDashboard() {
 
     // Handler for filter changes.
     const handleFilterChange = (newFilters: RealEstateFilterParams) => {
-        const merged = {...filters, ...newFilters};
+        const merged = { ...filters, ...newFilters };
         const query = new URLSearchParams(merged as Record<string, string>).toString();
-        router.replace(`?${query}`, {scroll: false});
+        router.replace(`?${query}`, { scroll: false });
     };
 
     // Callback for updating an existing polygon.
     const handleUpdatePolygon = async (updated: {
         coordinates: { lat: number; lng: number }[];
-        realEstateIds: string[]
+        realEstateIds: string[];
     }) => {
         if (selectedPolygon) {
             try {
@@ -134,7 +142,7 @@ export default function RealEstateDashboard() {
     const handleCreatePolygon = async (newPolygon: {
         name: string;
         coordinates: { lat: number; lng: number }[];
-        realEstateIds: string[]
+        realEstateIds: string[];
     }) => {
         try {
             const created = await createPolygon(newPolygon.name, newPolygon.coordinates, newPolygon.realEstateIds);
@@ -172,16 +180,18 @@ export default function RealEstateDashboard() {
         <div className="p-4 min-h-screen bg-gray-100">
             <h1 className="text-2xl font-bold mb-4">Real Estate Dashboard</h1>
             {/* Filter Form */}
-            <RealEstateFilterForm filters={filters} onChange={handleFilterChange}/>
+            <RealEstateFilterForm filters={filters} onChange={handleFilterChange} />
             <div className="flex flex-col lg:flex-row mt-4 gap-4">
                 {/* Properties List */}
                 <div className="flex-1">
-                    <h2 className="text-xl font-semibold mb-2">Properties List</h2>
-                    {loading ? <div>Loading properties...</div> : <RealEstateList realEstates={realEstates}/>}
+                    <h2 className="text-xl font-semibold mb-2">
+                        Properties List ({realEstates.length} found)
+                    </h2>
+                    {loading ? <div>Loading properties...</div> : <RealEstateList realEstates={realEstates} />}
                 </div>
                 {/* Map and Polygons List */}
                 <div className="flex-1 flex flex-col gap-4">
-                    <div className="border p-2" style={{resize: "horizontal", overflow: "auto", minWidth: "300px"}}>
+                    <div className="border p-2" style={{ resize: "horizontal", overflow: "auto", minWidth: "300px" }}>
                         <h2 className="text-xl font-semibold mb-2">Map View</h2>
                         {/* Polygon Selection Controls */}
                         <div className="mb-2 flex items-center gap-2">
@@ -205,18 +215,24 @@ export default function RealEstateDashboard() {
                             {selectedPolygon && (
                                 <>
                                     {editMode ? (
-                                        <button onClick={() => setEditMode(false)}
-                                                className="px-3 py-1 bg-yellow-700 text-white rounded">
+                                        <button
+                                            onClick={() => setEditMode(false)}
+                                            className="px-3 py-1 bg-yellow-700 text-white rounded"
+                                        >
                                             Cancel Editing
                                         </button>
                                     ) : (
-                                        <button onClick={() => setEditMode(true)}
-                                                className="px-3 py-1 bg-green-500 text-white rounded">
+                                        <button
+                                            onClick={() => setEditMode(true)}
+                                            className="px-3 py-1 bg-green-500 text-white rounded"
+                                        >
                                             Edit Polygon
                                         </button>
                                     )}
-                                    <button onClick={() => setSelectedPolygon(null)}
-                                            className="px-3 py-1 bg-red-500 text-white rounded">
+                                    <button
+                                        onClick={() => setSelectedPolygon(null)}
+                                        className="px-3 py-1 bg-red-500 text-white rounded"
+                                    >
                                         Clear Map
                                     </button>
                                 </>
@@ -250,9 +266,9 @@ export default function RealEstateDashboard() {
                         <RealEstateMap
                             realEstates={finalRealEstates}
                             attachedIds={attachedIds}
-                            center={{lat: 40.114955, lng: -111.654923}}
+                            center={{ lat: 40.114955, lng: -111.654923 }}
                             zoom={11}
-                            containerStyle={{width: "100%", height: "400px"}}
+                            containerStyle={{ width: "100%", height: "400px" }}
                             displayPolygon={selectedPolygon && !editMode ? selectedPolygon : undefined}
                             editablePolygon={selectedPolygon && editMode ? selectedPolygon : undefined}
                             onUpdatePolygon={handleUpdatePolygon}
@@ -261,7 +277,7 @@ export default function RealEstateDashboard() {
                     </div>
                     <div className="border p-2">
                         <h2 className="text-xl font-semibold mb-2">Saved Polygons</h2>
-                        <PolygonsList/>
+                        <PolygonsList />
                     </div>
                 </div>
             </div>

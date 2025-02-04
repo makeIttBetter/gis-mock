@@ -31,16 +31,25 @@ public class RealEstateController {
             @RequestParam(name = "state", required = false) String state,
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "minPrice", required = false) Double minPrice,
-            @RequestParam(name = "maxPrice", required = false) Double maxPrice
+            @RequestParam(name = "maxPrice", required = false) Double maxPrice,
+            @RequestParam(name = "ids", required = false) String ids,
+            @RequestParam(name = "address", required = false) String address,
+            @RequestParam(name = "zipcode", required = false) String zipcode
     ) {
-        log.info("GET /api/real-estate?city={}&state={}&status={}&minPrice={}&maxPrice={}",
-                city, state, status, minPrice, maxPrice);
+        // Log the new parameters for debugging
+        log.info("GET /api/real-estate?city={}&state={}&status={}&minPrice={}&maxPrice={}&ids={}&address={}&zipcode={}",
+                city, state, status, minPrice, maxPrice, ids, address, zipcode);
+
         RealEstateFilterDto filterDto = new RealEstateFilterDto();
         filterDto.setCity(city);
         filterDto.setState(state);
         filterDto.setStatus(status);
         filterDto.setMinPrice(minPrice);
         filterDto.setMaxPrice(maxPrice);
+        filterDto.setIds(ids);
+        filterDto.setAddress(address);
+        filterDto.setZipcode(zipcode);
+
         return realEstateService.getFilteredRealEstate(filterDto);
     }
 
