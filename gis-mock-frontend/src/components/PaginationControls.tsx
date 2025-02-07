@@ -1,5 +1,3 @@
-// frontend/src/components/PaginationControls.tsx
-
 "use client";
 import React from "react";
 import { PaginationDTO } from "@/interfaces/PaginationDTO";
@@ -9,7 +7,10 @@ interface Props {
     onPageChange: (newPage: number) => void;
 }
 
-export const PaginationControls: React.FC<Props> = ({ pagination, onPageChange }) => {
+export const PaginationControls: React.FC<Props> = ({
+                                                        pagination,
+                                                        onPageChange
+                                                    }) => {
     const { page, page_size, total_pages, total_count } = pagination;
 
     function handlePrev() {
@@ -20,7 +21,6 @@ export const PaginationControls: React.FC<Props> = ({ pagination, onPageChange }
         if (page < total_pages) onPageChange(page + 1);
     }
 
-    // Developer note: Simple "Prev" / "Next" buttons with info about pages.
     return (
         <div className="flex items-center gap-4 mt-4">
             <button

@@ -1,34 +1,26 @@
 "use client";
-import React, {
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-    CSSProperties
-} from "react";
+import React, {CSSProperties, useCallback, useEffect, useRef, useState} from "react";
 import {
-    GoogleMap,
-    Marker,
-    InfoWindow,
-    Polygon as MapPolygon,
     DrawingManager,
+    GoogleMap,
+    InfoWindow,
+    Marker,
+    Polygon as MapPolygon,
     useLoadScript
 } from "@react-google-maps/api";
-import { RealEstate } from "@/interfaces/RealEstate";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
 
-const LIBRARIES: (
-    | "drawing"
-    | "geometry"
-    | "places"
-    | "visualization"
-    )[] = ["drawing", "geometry"];
+const LIBRARIES: ("drawing" | "geometry" | "places" | "visualization")[] = [
+    "drawing",
+    "geometry"
+];
 
-/**
- * The props for our RealEstateMap component.
- */
 export interface RealEstateMapProps {
-    /** All real estate objects for markers. */
-    realEstates: RealEstate[];
+    /** All real estate objects for markers (using minimal map DTO). */
+    realEstates: RealEstateMapDto[];
+
+    /** Which IDs are considered "attached" (for coloring, etc.). */
+    attachedIds?: string[];
 
     /** Initial center and zoom for the map. */
     center?: google.maps.LatLngLiteral;
@@ -63,70 +55,56 @@ export interface RealEstateMapProps {
 
     /**
      * Called when user finalizes creation of a brand-new polygon
-     * (i.e. they click "Save New Polygon", enter a name, etc.).
+     * (they click "Save New Polygon" after drawing).
      */
     onCreatePolygon?: (newPolygon: {
         name: string;
         coordinates: { lat: number; lng: number }[];
         realEstateIds: string[];
     }) => void;
-
-    /**
-     * Real Estate IDs "attached" to the selected polygon, so we color them differently.
-     */
-    attachedIds?: string[];
 }
 
-/**
- * RealEstateMap: handles markers, the existing polygon,
- * and a "draw new polygon" feature that only prompts for a name when saved.
- */
 export default function RealEstateMap({
                                           realEstates,
-                                          center = { lat: 40.114955, lng: -111.654923 },
+                                          attachedIds,
+                                          center = {lat: 40.114955, lng: -111.654923},
                                           zoom = 11,
-                                          containerStyle = { width: "100%", height: "400px" },
+                                          containerStyle = {width: "100%", height: "400px"},
                                           displayPolygon,
                                           editablePolygon,
                                           onUpdatePolygon,
-                                          onCreatePolygon,
-                                          attachedIds
+                                          onCreatePolygon
                                       }: RealEstateMapProps) {
-    const { isLoaded } = useLoadScript({
+    const {isLoaded} = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: LIBRARIES
     });
 
-    // A ref to the Google Map instance.
     const mapRef = useRef<google.maps.Map | null>(null);
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
     }, []);
 
-    // Reference to the DrawingManager instance.
-    const [drawingManager, setDrawingManager] = useState<google.maps.drawing.DrawingManager | null>(null);
+    const [drawingManager, setDrawingManager] =
+        useState<google.maps.drawing.DrawingManager | null>(null);
 
-    // Track if the user is actively drawing a polygon right now.
     const [isDrawingActive, setIsDrawingActive] = useState(false);
+    const [selectedRE, setSelectedRE] = useState<RealEstateMapDto | null>(null);
 
-    // Selected real estate for InfoWindow.
-    const [selectedRE, setSelectedRE] = useState<RealEstate | null>(null);
+    // "Draft" polygon that the user just drew
+    const [draftPolygon, setDraftPolygon] = useState<google.maps.Polygon | null>(
+        null
+    );
+    const [draftCoords, setDraftCoords] = useState<
+        { lat: number; lng: number }[] | null
+    >(null);
 
-    // === NEW: Store a "draft" polygon that the user just drew, which they can save or discard. ===
-    // The Google Maps Polygon instance:
-    const [draftPolygon, setDraftPolygon] = useState<google.maps.Polygon | null>(null);
-    // The list of coordinates for the draft polygon:
-    const [draftCoords, setDraftCoords] = useState<{ lat: number; lng: number }[] | null>(null);
-
-    // === Handling "edit mode" polygon instance ===
+    // For editing an existing polygon
     const [editablePolygonInstance, setEditablePolygonInstance] =
         useState<google.maps.Polygon | null>(null);
 
-    // -------------------------------------------
     // 1. Start or cancel drawing brand-new polygon
-    // -------------------------------------------
     const startDrawing = () => {
-        // If there's an existing draft polygon not yet saved, discard it first.
         if (draftPolygon) {
             draftPolygon.setMap(null);
             setDraftPolygon(null);
@@ -142,7 +120,6 @@ export default function RealEstateMap({
         setIsDrawingActive(false);
     };
 
-    // Pressing ESC should cancel drawing if it’s active.
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isDrawingActive) {
@@ -153,7 +130,6 @@ export default function RealEstateMap({
         return () => window.removeEventListener("keydown", handleEsc);
     }, [isDrawingActive, drawingManager]);
 
-    // Called when the drawing manager is ready.
     const onDrawingManagerLoad = useCallback(
         (manager: google.maps.drawing.DrawingManager) => {
             setDrawingManager(manager);
@@ -161,83 +137,59 @@ export default function RealEstateMap({
         []
     );
 
-    // -----------------------------------------------
-    // 2. onOverlayComplete - user finished a new shape
-    // -----------------------------------------------
+    // 2. When user finishes drawing a polygon
     const onOverlayComplete = useCallback(
         (e: google.maps.drawing.OverlayCompleteEvent) => {
             if (!isDrawingActive) {
-                // If for some reason the user wasn't truly drawing, remove.
                 e.overlay.setMap(null);
                 return;
             }
-
-            // We only care about polygons.
             if (e.type !== google.maps.drawing.OverlayType.POLYGON) {
                 e.overlay.setMap(null);
                 return;
             }
-
-            // The polygon was completed: turn off drawing mode
             cancelDrawing();
-
             const polygon = e.overlay as google.maps.Polygon;
             const path = polygon.getPath();
             const coords: { lat: number; lng: number }[] = [];
-
             for (let i = 0; i < path.getLength(); i++) {
                 const point = path.getAt(i);
-                coords.push({ lat: point.lat(), lng: point.lng() });
+                coords.push({lat: point.lat(), lng: point.lng()});
             }
-
-            // If polygon has fewer than 3 points, discard it
+            // must have at least 3 points
             if (coords.length < 3) {
                 polygon.setMap(null);
                 return;
             }
-
-            // Store as a "draft" polygon in state:
             setDraftPolygon(polygon);
             setDraftCoords(coords);
         },
         [isDrawingActive, drawingManager]
     );
 
-    // -------------------------------------------------------------------
-    // 3. If there's a draft polygon, the user can "Save" or "Discard" it.
-    //    We only prompt for the polygon name on "Save".
-    // -------------------------------------------------------------------
+    // 3. Save or discard the brand-new polygon
     const handleSaveNewPolygon = () => {
         if (!draftPolygon || !draftCoords || !onCreatePolygon) return;
-
         const name = window.prompt("Enter a name for the new polygon:");
         if (!name) {
-            // If user canceled the prompt or left it empty, do nothing
             return;
         }
-
-        // Figure out which real estates are inside this polygon
-        const googlePoly = new google.maps.Polygon({ paths: draftCoords });
+        // Figure out which realEstates are inside the polygon
+        const googlePoly = new google.maps.Polygon({paths: draftCoords});
         const insideIds: string[] = [];
         for (const re of realEstates) {
-            const lat = parseFloat(re.latitude);
-            const lng = parseFloat(re.longitude);
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const pos = new google.maps.LatLng(lat, lng);
+            if (re.latitude !== null && re.longitude !== null) {
+                const pos = new google.maps.LatLng(re.latitude, re.longitude);
                 if (google.maps.geometry.poly.containsLocation(pos, googlePoly)) {
-                    insideIds.push(re.id.toString());
+                    insideIds.push(re.id);
                 }
             }
         }
-
-        // Finally create it via callback
         onCreatePolygon({
             name,
             coordinates: draftCoords,
             realEstateIds: insideIds
         });
-
-        // Remove from map and reset draft
         draftPolygon.setMap(null);
         setDraftPolygon(null);
         setDraftCoords(null);
@@ -251,51 +203,41 @@ export default function RealEstateMap({
         setDraftCoords(null);
     };
 
-    // -----------------------------------------------------------
-    // 4. Handling "edit mode" for an existing polygon (green one)
-    // -----------------------------------------------------------
+    // 4. Edit mode for an existing polygon
     const handleSaveEditablePolygon = () => {
         if (!editablePolygon || !editablePolygonInstance || !onUpdatePolygon) return;
-
-        // Collect the updated coords
         const path = editablePolygonInstance.getPath();
         const coords: { lat: number; lng: number }[] = [];
         for (let i = 0; i < path.getLength(); i++) {
             const point = path.getAt(i);
-            coords.push({ lat: point.lat(), lng: point.lng() });
+            coords.push({lat: point.lat(), lng: point.lng()});
         }
-
-        // Determine which RealEstate is inside these coords
-        const googlePoly = new google.maps.Polygon({ paths: coords });
+        // figure out which re are inside
+        const googlePoly = new google.maps.Polygon({paths: coords});
         const insideIds: string[] = [];
         for (const re of realEstates) {
-            const lat = parseFloat(re.latitude);
-            const lng = parseFloat(re.longitude);
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const pos = new google.maps.LatLng(lat, lng);
+            if (re.latitude !== null && re.longitude !== null) {
+                const pos = new google.maps.LatLng(re.latitude, re.longitude);
                 if (google.maps.geometry.poly.containsLocation(pos, googlePoly)) {
-                    insideIds.push(re.id.toString());
+                    insideIds.push(re.id);
                 }
             }
         }
-
         const doSave = window.confirm("Save changes to polygon?");
         if (!doSave) return;
-
         onUpdatePolygon({
             coordinates: coords,
             realEstateIds: insideIds
         });
     };
 
-    // If the map isn't loaded, show a fallback
     if (!isLoaded) {
         return <div>Loading Map...</div>;
     }
 
     return (
         <div>
-            {/* Buttons for starting/canceling a new polygon (only if not in "edit mode") */}
+            {/* If not editing an existing polygon, show "Draw New Polygon" button */}
             {!editablePolygon && (
                 <div className="mb-2">
                     {isDrawingActive ? (
@@ -319,10 +261,7 @@ export default function RealEstateMap({
                 <DrawingManager
                     onLoad={onDrawingManagerLoad}
                     onOverlayComplete={onOverlayComplete}
-                    // If isDrawingActive, let user draw polygons; otherwise none
-                    drawingMode={
-                        isDrawingActive ? google.maps.drawing.OverlayType.POLYGON : null
-                    }
+                    drawingMode={isDrawingActive ? google.maps.drawing.OverlayType.POLYGON : null}
                     options={{
                         drawingControl: false,
                         polygonOptions: {
@@ -336,11 +275,9 @@ export default function RealEstateMap({
                     }}
                 />
 
-                {/* If we have a 'draft' polygon, show it as-is. It's already on the map. */}
-                {/* The user will see it because we haven't removed it from the map. */}
-                {/* We'll provide Save/Discard buttons below to finalize or remove it. */}
+                {/* "draftPolygon" is already rendered by DrawingManager, so no need to re-render it here */}
 
-                {/* Show a "static" polygon in BLUE if displayPolygon is given and we're not editing. */}
+                {/* read-only polygon in BLUE */}
                 {displayPolygon && !editablePolygon && (
                     <MapPolygon
                         paths={displayPolygon.coordinates}
@@ -353,7 +290,7 @@ export default function RealEstateMap({
                     />
                 )}
 
-                {/* Show an "editable" polygon in GREEN if provided. */}
+                {/* editable polygon in GREEN */}
                 {editablePolygon && (
                     <MapPolygon
                         paths={editablePolygon.coordinates}
@@ -368,19 +305,15 @@ export default function RealEstateMap({
                     />
                 )}
 
-                {/* Markers for each RealEstate object */}
+                {/* Markers */}
                 {realEstates.map((re) => {
-                    const lat = parseFloat(re.latitude);
-                    const lng = parseFloat(re.longitude);
-                    if (isNaN(lat) || isNaN(lng)) return null;
-
-                    // Color attached ones differently
-                    const isAttached = attachedIds?.includes(String(re.id));
+                    if (re.latitude == null || re.longitude == null) return null;
+                    const isAttached = attachedIds?.includes(re.id) ?? false;
 
                     return (
                         <Marker
                             key={re.id}
-                            position={{ lat, lng }}
+                            position={{lat: re.latitude, lng: re.longitude}}
                             icon={{
                                 url: isAttached
                                     ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
@@ -391,30 +324,23 @@ export default function RealEstateMap({
                     );
                 })}
 
-                {/* If the user clicked a marker, show an InfoWindow */}
-                {selectedRE && (
+                {selectedRE && selectedRE.latitude != null && selectedRE.longitude != null && (
                     <InfoWindow
-                        position={{
-                            lat: parseFloat(selectedRE.latitude),
-                            lng: parseFloat(selectedRE.longitude)
-                        }}
+                        position={{lat: selectedRE.latitude, lng: selectedRE.longitude}}
                         onCloseClick={() => setSelectedRE(null)}
                     >
                         <div>
                             <div className="text-xs text-gray-500">ID: {selectedRE.id}</div>
-                            <div className="font-semibold">{selectedRE.address}</div>
-                            <div>
-                                {selectedRE.city}, {selectedRE.state} {selectedRE.zip}
+                            <div className="font-semibold">
+                                {selectedRE.city}, {selectedRE.state}
                             </div>
-                            <div>
-                                Status: {selectedRE.status} | Price: {selectedRE.listPrice || "N/A"}
-                            </div>
+                            <div>Status: {selectedRE.status || "N/A"}</div>
                         </div>
                     </InfoWindow>
                 )}
             </GoogleMap>
 
-            {/* If user has a "draft" polygon, give them buttons to Save or Discard */}
+            {/* If user has a "draft" polygon, show Save/Discard */}
             {draftPolygon && draftCoords && (
                 <div className="mt-3 flex gap-2">
                     <button
@@ -432,7 +358,7 @@ export default function RealEstateMap({
                 </div>
             )}
 
-            {/* If we are editing an existing polygon, show a "Save" button */}
+            {/* If editing existing polygon, show "Save" button */}
             {editablePolygon && onUpdatePolygon && (
                 <div className="mt-3">
                     <button
