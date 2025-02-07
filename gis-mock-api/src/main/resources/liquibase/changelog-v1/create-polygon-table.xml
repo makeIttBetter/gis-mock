@@ -16,6 +16,7 @@
             <column name="coordinates" type="TEXT"/>
             <column name="real_estate_ids" type="TEXT"/>
             <column name="arcgis_layer_id" type="TEXT"/>
+            <column name="arcgis_polygon_id" type="TEXT"/>
             <column name="created_at" type="TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP"/>
         </createTable>

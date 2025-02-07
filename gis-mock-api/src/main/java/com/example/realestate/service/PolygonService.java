@@ -1,4 +1,3 @@
-// File: src/main/java/com/example/realestate/service/PolygonService.java
 package com.example.realestate.service;
 
 import com.example.realestate.converters.PolygonCreateDtoToPolygonConverter;
@@ -41,27 +40,43 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         this.arcgisLayerService = arcgisLayerService;
     }
 
-    /**
-     * Create a new polygon and, upon success, create a corresponding ArcGIS layer.
-     */
     @Override
     public PolygonDto create(PolygonDto polygonDto) {
-        log.info("Creating polygon: {}", polygonDto);
-        // Create a temporary PolygonCreateDto from the incoming PolygonDto
+        log.info("Creating polygon from PolygonDto: {}", polygonDto);
+        // We'll adapt the polygonDto -> PolygonCreateDto
         PolygonCreateDto createDto = new PolygonCreateDto();
         createDto.setName(polygonDto.getName());
         createDto.setCoordinates(polygonDto.getCoordinates());
         createDto.setRealEstateIds(polygonDto.getRealEstateObjects());
-        Polygon polygon = createConverter.convert(createDto);
+
+        return create(createDto); // Just reuse the overload below
+    }
+
+    /**
+     * Overloaded create method that takes a PolygonCreateDto directly.
+     * This is used by the REST controller and by create(PolygonDto).
+     */
+    public PolygonDto create(PolygonCreateDto polygonCreateDto) {
+        log.info("Creating polygon (overloaded) with: {}", polygonCreateDto);
+
+        // 1) Convert to entity and save (so we have an ID in the DB).
+        Polygon polygon = createConverter.convert(polygonCreateDto);
         Polygon saved = polygonRepository.save(polygon);
 
-        // Construct the external data URL for the new layer.
-        // This should point to your application’s endpoint that serves layer data.
-        String dataUrl = layersUrl + saved.getId();
-
-        // Create corresponding layer in ArcGIS using the polygon's name and the data URL.
-        String arcgisLayerId = arcgisLayerService.createLayer(saved.getName(), dataUrl);
+        // 2) Create the ArcGIS dataset (as before). We'll call it "dataset layer".
+        //    The dataUrl points to your openApi layer:  e.g.  https://yourdomain/openApi/layers/{polygonId}
+//        String dataUrl = layersUrl + saved.getId();
+        String dataUrl = "https://mytestapp.online/api/gis/mock-dots";
+        String arcgisLayerId = arcgisLayerService.createLayer(saved.getName() + " (DataSet)", dataUrl);
         saved.setArcgisLayerId(arcgisLayerId);
+
+        // 3) Create the ArcGIS polygon layer using the mock link
+        //    (per REQUIREMENT #1).
+        String polygonDataUrl = "https://mytestapp.online/api/gis/mock-polygon";
+        String arcgisPolygonId = arcgisLayerService.createLayer(saved.getName() + " (Polygon)", polygonDataUrl);
+        saved.setArcgisPolygonId(arcgisPolygonId);
+
+        // 4) Save again to store these two new IDs
         saved = polygonRepository.save(saved);
 
         PolygonDto result = toDtoConverter.convert(saved);
@@ -107,36 +122,26 @@ public class PolygonService implements CrudService<PolygonDto, String> {
             log.error("Error processing JSON during polygon update", e);
             throw new RuntimeException(e);
         }
+        // Per REQUIREMENT #2: Do NOT update the polygon in ArcGIS; no call to arcgisLayerService here.
         Polygon saved = polygonRepository.save(existing);
         PolygonDto result = toDtoConverter.convert(saved);
         log.info("Polygon updated with ID: {}", result.getId());
         return result;
     }
 
-    /**
-     * Deletes the polygon and also deletes its corresponding ArcGIS layer.
-     */
     @Override
     public void delete(String id) {
         log.info("Deleting polygon with ID: {}", id);
         Polygon polygon = polygonRepository.findById(id).orElse(null);
-        if (polygon != null && polygon.getArcgisLayerId() != null) {
-            arcgisLayerService.deleteLayer(polygon.getArcgisLayerId());
+        if (polygon != null) {
+            // REQUIREMENT #3: Delete both the dataset and the polygon layer in ArcGIS
+            if (polygon.getArcgisLayerId() != null) {
+                arcgisLayerService.deleteLayer(polygon.getArcgisLayerId());
+            }
+            if (polygon.getArcgisPolygonId() != null) {
+                arcgisLayerService.deleteLayer(polygon.getArcgisPolygonId());
+            }
         }
         polygonRepository.deleteById(id);
-    }
-
-    // Overloaded create method if needed.
-    public PolygonDto create(PolygonCreateDto polygonCreateDto) {
-        log.info("Creating polygon (overloaded) with: {}", polygonCreateDto);
-        Polygon polygon = createConverter.convert(polygonCreateDto);
-        Polygon saved = polygonRepository.save(polygon);
-        String dataUrl = layersUrl + saved.getId();
-        String arcgisLayerId = arcgisLayerService.createLayer(saved.getName(), dataUrl);
-        saved.setArcgisLayerId(arcgisLayerId);
-        saved = polygonRepository.save(saved);
-        PolygonDto result = toDtoConverter.convert(saved);
-        log.info("Polygon created with ID: {}", result.getId());
-        return result;
     }
 }

@@ -1,4 +1,3 @@
-// File: src/main/java/com/example/realestate/model/Polygon.java
 package com.example.realestate.model;
 
 import jakarta.persistence.Column;
@@ -27,7 +26,12 @@ public class Polygon extends Model {
     @Column(name = "real_estate_ids", columnDefinition = "TEXT")
     private String realEstateIds;
 
-    // NEW: Field to store the corresponding ArcGIS layer ID
+    // Field for the ArcGIS dataset/item ID
     @Column(name = "arcgis_layer_id")
     private String arcgisLayerId;
+
+    // NEW: Field for the ArcGIS polygon layer ID
+    // (added via the new Liquibase changeset).
+    @Column(name = "arcgis_polygon_id")
+    private String arcgisPolygonId;
 }

@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * Service for managing ArcGIS layers.
- * Updated to create a GeoJSON layer instead of a CSV layer.
+ * Updated to create a GeoJSON layer referencing an external data URL.
  */
 @Slf4j
 @Service
@@ -32,22 +32,23 @@ public class ArcgisLayerService {
     /**
      * Creates a new GeoJSON layer in ArcGIS Online that references an external data URL.
      *
-     * @param polygonName The name of the new layer.
-     * @param dataUrl     The external URL containing the GeoJSON data (e.g. /openApi/layers/{polygonId}).
-     * @return the ArcGIS item ID (layer ID) returned by ArcGIS.
+     * @param layerName The name to display for the layer.
+     * @param dataUrl   The external URL containing the GeoJSON data.
+     * @return the ArcGIS item ID returned by ArcGIS.
      */
-    public String createLayer(String polygonName, String dataUrl) {
+    public String createLayer(String layerName, String dataUrl) {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-        formData.add("title", polygonName);
-        // Change type from "CSV" to "GeoJson" for creating a GeoJSON layer.
+        formData.add("title", layerName);
+        // For polygons, use "GeoJson"; we remain consistent with the type used previously.
         formData.add("type", "GeoJson");
-        // TODO: Update the URL to point to your application's endpoint that serves GeoJSON data.
-        formData.add("url", "https://mytestapp.online/api/gis/mock-dots");
-        formData.add("description", "GeoJSON layer created by RealEstate App for polygon: " + polygonName);
+        formData.add("url", dataUrl);
+        formData.add("description", "GeoJSON layer created by RealEstate App: " + layerName);
 
-        log.info("Creating ArcGIS layer (GeoJSON) with name: {} in default folder", polygonName);
+        log.info("Creating ArcGIS layer (GeoJSON) with name: {} and URL: {}", layerName, dataUrl);
         try {
-            Map<String, Object> response = arcgisClient.addItem(arcgisUsername, "json", arcgisApiKey, formData);
+            Map<String, Object> response =
+                    arcgisClient.addItem(arcgisUsername, "json", arcgisApiKey, formData);
+
             Object successObj = response.get("success");
             boolean success = false;
             if (successObj instanceof Boolean) {
@@ -69,13 +70,18 @@ public class ArcgisLayerService {
         }
     }
 
+    /**
+     * Deletes an ArcGIS layer/item by ID.
+     */
     public void deleteLayer(String itemId) {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("items", itemId);
 
         log.info("Deleting ArcGIS layer with itemId: {}", itemId);
         try {
-            Map<String, Object> response = arcgisClient.deleteItems(arcgisUsername, "json", arcgisApiKey, formData);
+            Map<String, Object> response =
+                    arcgisClient.deleteItems(arcgisUsername, "json", arcgisApiKey, formData);
+
             Object resultsObj = response.get("results");
             boolean success = false;
             if (resultsObj instanceof java.util.List) {
