@@ -18,6 +18,8 @@ function toQueryString(paramsObj: Record<string, any>): string {
     return searchParams.toString();
 }
 
+
+
 /**
  * Generic GET request.
  */
@@ -38,6 +40,35 @@ export async function apiGet<T>(
     }
     return res.json() as Promise<T>;
 }
+
+
+/**
+ * Construct a URL by appending a path segment to the baseEndpoint,
+ * then perform a GET request.
+ */
+export async function apiGetPath<T>(
+    endpoint: keyof typeof API_ENDPOINTS,
+    path: string,
+    queryParams?: Record<string, any>
+): Promise<T> {
+    const baseUrl = API_ENDPOINTS[endpoint];
+    const url =
+        `${baseUrl}/${encodeURIComponent(path)}` +
+        (queryParams ? `?${toQueryString(queryParams)}` : "");
+    const res = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(
+            errorData.error || `GET ${url} failed: ${res.status}`
+        );
+    }
+    return res.json() as Promise<T>;
+}
+
+
 
 /**
  * Generic POST request.

@@ -14,4 +14,7 @@ public class RealEstateDto {
     private String listPrice;
     private String latitude;
     private String longitude;
+    private Integer daysBack;
+    private boolean verified;
+
 }

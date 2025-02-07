@@ -27,28 +27,15 @@ public class RealEstateController {
 
     @GetMapping
     public List<RealEstateDto> getRealEstate(
-            @RequestParam(name = "city", required = false) String city,
-            @RequestParam(name = "state", required = false) String state,
-            @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "minPrice", required = false) Double minPrice,
-            @RequestParam(name = "maxPrice", required = false) Double maxPrice,
-            @RequestParam(name = "ids", required = false) String ids,
-            @RequestParam(name = "address", required = false) String address,
-            @RequestParam(name = "zipcode", required = false) String zipcode
+            RealEstateFilterDto filterDto
     ) {
         // Log the new parameters for debugging
-        log.info("GET /api/real-estate?city={}&state={}&status={}&minPrice={}&maxPrice={}&ids={}&address={}&zipcode={}",
-                city, state, status, minPrice, maxPrice, ids, address, zipcode);
-
-        RealEstateFilterDto filterDto = new RealEstateFilterDto();
-        filterDto.setCity(city);
-        filterDto.setState(state);
-        filterDto.setStatus(status);
-        filterDto.setMinPrice(minPrice);
-        filterDto.setMaxPrice(maxPrice);
-        filterDto.setIds(ids);
-        filterDto.setAddress(address);
-        filterDto.setZipcode(zipcode);
+        log.info("GET /api/real-estate?city={}, state={}, status={}, minPrice={}, maxPrice={}, ids={}, address={}, zipcode={}, propertyTypes={}, styles={}, yearBuiltMin={}, yearBuiltMax={}, glaMin={}, glaMax={}, basementSqFtMin={}, basementSqFtMax={}, basementFinished={}, daysBackMin={}, daysBackMax={}",
+                filterDto.getCity(), filterDto.getState(), filterDto.getStatus(), filterDto.getMinPrice(), filterDto.getMaxPrice(),
+                filterDto.getIds(), filterDto.getAddress(), filterDto.getZipcode(), filterDto.getPropertyTypes(), filterDto.getStyles(),
+                filterDto.getYearBuiltMin(), filterDto.getYearBuiltMax(), filterDto.getGlaMin(), filterDto.getGlaMax(),
+                filterDto.getBasementSqFtMin(), filterDto.getBasementSqFtMax(), filterDto.getBasementFinished(),
+                filterDto.getDaysBackMin(), filterDto.getDaysBackMax());
 
         return realEstateService.getFilteredRealEstate(filterDto);
     }

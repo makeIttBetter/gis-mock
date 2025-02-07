@@ -3,9 +3,11 @@ package com.example.realestate.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "real_estate")
@@ -286,8 +288,16 @@ public class RealEstate extends Model {
     @Column(name = "verified")
     private Boolean verified;
 
-    @Column(name = "days_back")
-    private Integer daysBack;
+    // We do NOT store "days_back" in DB. Instead, we compute it on the fly.
+    // (Because of Rule #2.)
+    @Transient
+    public Integer getDaysBack() {
+        if (this.soldDate == null) {
+            return null;
+        }
+        LocalDate today = LocalDate.now();
+        return (int) ChronoUnit.DAYS.between(this.soldDate, today);
+    }
 
     @Column(name = "legal_match_to_tax")
     private Boolean legalMatchToTax;

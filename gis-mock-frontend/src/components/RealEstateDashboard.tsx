@@ -1,14 +1,15 @@
-// File: frontend/src/components/RealEstateDashboard.tsx
+// File: src/components/RealEstateDashboard.tsx
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RealEstate } from "@/interfaces/RealEstate";
 import { fetchAttachedRealEstate, fetchRealEstateData } from "@/lib/realEstateApi";
-import RealEstateFilterForm from "./RealEstateFilterForm";
+import RealEstateFilterForm from "@/components/RealEstateFilterForm";
 import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
-import RealEstateList from "./RealEstateList";
+import RealEstateList from "@/components/RealEstateList";
 import RealEstateMap from "@/components/map/RealEstateMap";
-import PolygonsList from "./PolygonsList";
+import PolygonsList from "@/components/PolygonsList";
 import { createPolygon, fetchPolygons, updatePolygon } from "@/lib/polygonApi";
 import { PolygonDTO } from "@/interfaces/PolygonDTO";
 
@@ -16,7 +17,7 @@ export default function RealEstateDashboard() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // State for filtering real estate.
+    // Initialize filter state with both existing and new filter fields.
     const [filters, setFilters] = useState<RealEstateFilterParams>({
         city: "",
         state: "",
@@ -26,16 +27,23 @@ export default function RealEstateDashboard() {
         ids: "",
         address: "",
         zipcode: "",
+        propertyTypes: [],
+        styles: [],
+        yearBuiltMin: undefined,
+        yearBuiltMax: undefined,
+        glaMin: undefined,
+        glaMax: undefined,
+        basementSqFtMin: undefined,
+        basementSqFtMax: undefined,
+        basementFinished: undefined,
+        daysBackMin: undefined,
+        daysBackMax: undefined,
     });
     const [realEstates, setRealEstates] = useState<RealEstate[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
-
-    // State for managing polygons.
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
     const [selectedPolygon, setSelectedPolygon] = useState<PolygonDTO | null>(null);
     const [editMode, setEditMode] = useState<boolean>(false);
-
-    // NEW: States for checkboxes to control marker display.
     const [showAttached, setShowAttached] = useState(true);
     const [showNotAttached, setShowNotAttached] = useState(true);
     const [attachedRealEstates, setAttachedRealEstates] = useState<RealEstate[]>([]);
@@ -53,6 +61,17 @@ export default function RealEstateDashboard() {
             ids: params.ids || "",
             address: params.address || "",
             zipcode: params.zipcode || "",
+            propertyTypes: params.propertyTypes ? params.propertyTypes.split(",") : [],
+            styles: params.styles ? params.styles.split(",") : [],
+            yearBuiltMin: params.yearBuiltMin ? Number(params.yearBuiltMin) : undefined,
+            yearBuiltMax: params.yearBuiltMax ? Number(params.yearBuiltMax) : undefined,
+            glaMin: params.glaMin ? Number(params.glaMin) : undefined,
+            glaMax: params.glaMax ? Number(params.glaMax) : undefined,
+            basementSqFtMin: params.basementSqFtMin ? Number(params.basementSqFtMin) : undefined,
+            basementSqFtMax: params.basementSqFtMax ? Number(params.basementSqFtMax) : undefined,
+            basementFinished: params.basementFinished ? params.basementFinished === "true" : undefined,
+            daysBackMin: params.daysBackMin ? Number(params.daysBackMin) : undefined,
+            daysBackMax: params.daysBackMax ? Number(params.daysBackMax) : undefined,
         });
     }, [searchParams]);
 
@@ -69,7 +88,6 @@ export default function RealEstateDashboard() {
                 setLoading(false);
             }
         }
-
         loadData();
     }, [filters]);
 
@@ -83,33 +101,59 @@ export default function RealEstateDashboard() {
                 console.error("Error fetching polygons:", error);
             }
         }
-
         loadPolygons();
     }, []);
 
-    // NEW: When a polygon is selected and "show attached" is true, fetch its attached real estate objects.
+    // When a polygon is selected and "show attached" is true, fetch its attached real estate objects.
     useEffect(() => {
         async function loadAttached() {
-            if (selectedPolygon && showAttached && selectedPolygon.realEstateObjects.length > 0) {
+            if (
+                selectedPolygon &&
+                showAttached &&
+                selectedPolygon.realEstateObjects.length > 0
+            ) {
                 try {
-                    const data = await fetchAttachedRealEstate(selectedPolygon.realEstateObjects);
+                    const data = await fetchAttachedRealEstate(
+                        selectedPolygon.realEstateObjects
+                    );
                     setAttachedRealEstates(data);
                 } catch (error) {
                     console.error("Error fetching attached real estate:", error);
                     setAttachedRealEstates([]);
                 }
             } else {
+                // Clear the attached real estate when there's no polygon or showAttached is off
                 setAttachedRealEstates([]);
             }
         }
-
         loadAttached();
     }, [selectedPolygon, showAttached]);
 
-    // Handler for filter changes.
+    // Handle filter changes by merging with current filters and updating URL query parameters.
     const handleFilterChange = (newFilters: RealEstateFilterParams) => {
         const merged = { ...filters, ...newFilters };
-        const query = new URLSearchParams(merged as Record<string, string>).toString();
+        const queryParams: Record<string, string> = {
+            city: merged.city || "",
+            state: merged.state || "",
+            status: merged.status || "",
+            minPrice: merged.minPrice || "",
+            maxPrice: merged.maxPrice || "",
+            ids: merged.ids || "",
+            address: merged.address || "",
+            zipcode: merged.zipcode || "",
+            propertyTypes: merged.propertyTypes ? merged.propertyTypes.join(",") : "",
+            styles: merged.styles ? merged.styles.join(",") : "",
+            yearBuiltMin: merged.yearBuiltMin?.toString() || "",
+            yearBuiltMax: merged.yearBuiltMax?.toString() || "",
+            glaMin: merged.glaMin?.toString() || "",
+            glaMax: merged.glaMax?.toString() || "",
+            basementSqFtMin: merged.basementSqFtMin?.toString() || "",
+            basementSqFtMax: merged.basementSqFtMax?.toString() || "",
+            basementFinished: merged.basementFinished !== undefined ? merged.basementFinished.toString() : "",
+            daysBackMin: merged.daysBackMin?.toString() || "",
+            daysBackMax: merged.daysBackMax?.toString() || "",
+        };
+        const query = new URLSearchParams(queryParams).toString();
         router.replace(`?${query}`, { scroll: false });
     };
 
@@ -145,7 +189,11 @@ export default function RealEstateDashboard() {
         realEstateIds: string[];
     }) => {
         try {
-            const created = await createPolygon(newPolygon.name, newPolygon.coordinates, newPolygon.realEstateIds);
+            const created = await createPolygon(
+                newPolygon.name,
+                newPolygon.coordinates,
+                newPolygon.realEstateIds
+            );
             alert("New polygon created successfully!");
             const updatedPolygons = await fetchPolygons();
             setPolygons(updatedPolygons);
@@ -157,7 +205,7 @@ export default function RealEstateDashboard() {
         }
     };
 
-    // Compute not attached real estate objects (from the filtered list) if a polygon is selected.
+    // Compute the list of real estate objects not attached to the selected polygon.
     const notAttachedRealEstates = selectedPolygon
         ? realEstates.filter(
             (re) => !selectedPolygon.realEstateObjects.includes(re.id.toString())
@@ -168,13 +216,17 @@ export default function RealEstateDashboard() {
     let finalRealEstates: RealEstate[] = [];
     if (selectedPolygon) {
         if (showAttached) finalRealEstates = finalRealEstates.concat(attachedRealEstates);
-        if (showNotAttached) finalRealEstates = finalRealEstates.concat(notAttachedRealEstates);
+        if (showNotAttached)
+            finalRealEstates = finalRealEstates.concat(notAttachedRealEstates);
     } else {
         finalRealEstates = realEstates;
     }
 
-    // The list of attached IDs (used for marker color) is taken from the fetched attached records.
-    const attachedIds = selectedPolygon && showAttached ? attachedRealEstates.map((re) => re.id.toString()) : [];
+    // Extract attached IDs (used for marker coloring).
+    const attachedIds =
+        selectedPolygon && showAttached
+            ? attachedRealEstates.map((re) => re.id.toString())
+            : [];
 
     return (
         <div className="p-4 min-h-screen bg-gray-100">
@@ -187,11 +239,18 @@ export default function RealEstateDashboard() {
                     <h2 className="text-xl font-semibold mb-2">
                         Properties List ({realEstates.length} found)
                     </h2>
-                    {loading ? <div>Loading properties...</div> : <RealEstateList realEstates={realEstates} />}
+                    {loading ? (
+                        <div>Loading properties...</div>
+                    ) : (
+                        <RealEstateList realEstates={realEstates} />
+                    )}
                 </div>
                 {/* Map and Polygons List */}
                 <div className="flex-1 flex flex-col gap-4">
-                    <div className="border p-2" style={{ resize: "horizontal", overflow: "auto", minWidth: "300px" }}>
+                    <div
+                        className="border p-2"
+                        style={{ resize: "horizontal", overflow: "auto", minWidth: "300px" }}
+                    >
                         <h2 className="text-xl font-semibold mb-2">Map View</h2>
                         {/* Polygon Selection Controls */}
                         <div className="mb-2 flex items-center gap-2">
@@ -199,7 +258,8 @@ export default function RealEstateDashboard() {
                             <select
                                 value={selectedPolygon ? selectedPolygon.id : ""}
                                 onChange={(e) => {
-                                    const poly = polygons.find((p) => p.id === e.target.value) || null;
+                                    const poly =
+                                        polygons.find((p) => p.id === e.target.value) || null;
                                     setSelectedPolygon(poly);
                                     setEditMode(false);
                                 }}
@@ -238,8 +298,7 @@ export default function RealEstateDashboard() {
                                 </>
                             )}
                         </div>
-
-                        {/* NEW: Checkbox controls – show attached and not attached markers */}
+                        {/* Checkbox controls – show attached and not attached markers */}
                         {selectedPolygon && (
                             <div className="mb-2 flex gap-4">
                                 <label className="flex items-center">
@@ -262,8 +321,8 @@ export default function RealEstateDashboard() {
                                 </label>
                             </div>
                         )}
-
                         <RealEstateMap
+                            key={`${selectedPolygon ? selectedPolygon.id : "none"}-${showAttached}-${showNotAttached}`}
                             realEstates={finalRealEstates}
                             attachedIds={attachedIds}
                             center={{ lat: 40.114955, lng: -111.654923 }}

@@ -1,14 +1,24 @@
-// frontend/src/interfaces/RealEstateFilterParams.ts
+// File: src/interfaces/RealEstateFilterParams.ts
+
 export interface RealEstateFilterParams {
     city?: string;
     state?: string;
     status?: string;
     minPrice?: string;
     maxPrice?: string;
-    /** Comma-separated list of IDs */
     ids?: string;
-    /** Full or partial address */
     address?: string;
-    /** Zip code */
     zipcode?: string;
+
+    propertyTypes?: string[]; // e.g. ["Single Family", "Townhouse", ...]
+    styles?: string[];        // e.g. ["Modern", "Traditional", ...]
+    yearBuiltMin?: number;
+    yearBuiltMax?: number;
+    glaMin?: number;
+    glaMax?: number;
+    basementSqFtMin?: number;
+    basementSqFtMax?: number;
+    basementFinished?: boolean;
+    daysBackMin?: number;
+    daysBackMax?: number;
 }

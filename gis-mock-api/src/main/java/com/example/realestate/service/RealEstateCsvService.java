@@ -4,11 +4,8 @@ import com.example.realestate.client.CensusGeocoderClient;
 import com.example.realestate.client.UtahMapServiceClient;
 import com.example.realestate.converters.CsvRowToRealEstateCsvRecordConverter;
 import com.example.realestate.converters.RealEstateCsvRecordToRealEstateConverter;
-import com.example.realestate.dto.CensusGeocodeResponse;
-import com.example.realestate.dto.RealEstateCsvErrorDto;
-import com.example.realestate.dto.RealEstateCsvRecord;
-import com.example.realestate.dto.RealEstateCsvUploadResult;
-import com.example.realestate.dto.UtahGeocodeResponse;
+import com.example.realestate.converters.RealEstateUpdateConverter;
+import com.example.realestate.dto.*;
 import com.example.realestate.model.RealEstate;
 import com.example.realestate.repository.RealEstateRepository;
 import com.example.realestate.util.UTMConverter;
@@ -33,9 +30,9 @@ public class RealEstateCsvService {
     private final RealEstateRepository realEstateRepository;
     private final CensusGeocoderClient censusGeocoderClient;
     private final UtahMapServiceClient utahMapServiceClient;
-    private final RealEstateCsvRecordToRealEstateConverter recordToEntityConverter;
+    private final RealEstateUpdateConverter realEstateUpdateConverter;
 
-    private static int UTAH_MAPS_CALLS_COUNTER = 0;
+    private final RealEstateCsvRecordToRealEstateConverter recordToEntityConverter;
 
     @Value("${mapserv.utah.apikey}")
     private String mapservUtahApiKey;
@@ -43,44 +40,34 @@ public class RealEstateCsvService {
     public RealEstateCsvService(RealEstateRepository realEstateRepository,
                                 CensusGeocoderClient censusGeocoderClient,
                                 UtahMapServiceClient utahMapServiceClient,
+                                RealEstateUpdateConverter realEstateUpdateConverter,
                                 RealEstateCsvRecordToRealEstateConverter recordToEntityConverter) {
         this.realEstateRepository = realEstateRepository;
         this.censusGeocoderClient = censusGeocoderClient;
         this.utahMapServiceClient = utahMapServiceClient;
+        this.realEstateUpdateConverter = realEstateUpdateConverter;
         this.recordToEntityConverter = recordToEntityConverter;
     }
 
     /**
-     * Processes the uploaded CSV file.
-     * <p>
-     * For each row, the CSV is converted into a RealEstateCsvRecord using
-     * the CsvRowToRealEstateCsvRecordConverter.
-     * If latitude and longitude are missing, the service first calls the Census Geocoder,
-     * and then falls back to the Utah Gov Maps API if necessary.
-     * Finally, the record is converted to a RealEstate entity and saved (unless its status is SOLD).
-     * </p>
-     * <p>
-     * <b>Note:</b> If your CSV file has fields that contain newline characters (i.e. multi-line fields)
-     * the default behavior of OpenCSV is to combine those lines into one record.
-     * If you want every physical line to be treated as a record, we disable multi-line processing by
-     * setting the quote character to a null value. (Make sure your CSV does not rely on quoting for other purposes!)
-     * </p>
-     *
-     * @param file the uploaded CSV file
-     * @return an upload result containing counts and error details
+     * Process the uploaded CSV, converting each row to RealEstate and saving/updating.
      */
     public RealEstateCsvUploadResult processCsv(MultipartFile file) {
         RealEstateCsvUploadResult result = new RealEstateCsvUploadResult();
         List<RealEstateCsvErrorDto> errorList = new ArrayList<>();
+        List<String[]> unsavedRows = new ArrayList<>();
+
         int totalRows = 0;
         int processedRows = 0;
 
+        // Optionally track how many were updated vs. newly created
+        int updatedCount = 0;
+        int createdCount = 0;
+
         try (Reader reader = new InputStreamReader(file.getInputStream())) {
-            // Configure CSVParser to disable multi-line support.
-            // This means that every physical line is treated as a record.
+            // Use OpenCSV to read the entire file
             CSVParser csvParser = new CSVParserBuilder()
                     .withSeparator(',')
-                    // Setting the quote character to CSVParser.NULL_CHARACTER disables special handling of quotes.
                     .withQuoteChar(CSVParser.NULL_CHARACTER)
                     .build();
 
@@ -88,159 +75,216 @@ public class RealEstateCsvService {
                     .withCSVParser(csvParser)
                     .build();
 
-            // Read all rows from the CSV file.
             List<String[]> allRows = csvReader.readAll();
-
-            // If there are no rows, return an empty result.
             if (allRows.isEmpty()) {
                 result.setTotalRows(0);
                 result.setProcessedRows(0);
                 result.setErrors(Collections.emptyList());
+                result.setHeaderRow(null);
+                result.setUnsavedRows(Collections.emptyList());
                 return result;
             }
 
-            // Build header mapping: (column name in lower case -> index)
+            // The first row is the header
             String[] header = allRows.get(0);
+            result.setHeaderRow(header);
+
+            // Build a map of columnName -> index from the header
             Map<String, Integer> headerMap = new HashMap<>();
             for (int i = 0; i < header.length; i++) {
                 headerMap.put(header[i].trim().toLowerCase(), i);
             }
 
-            // Create the CSV row converter with the header map.
-            CsvRowToRealEstateCsvRecordConverter rowConverter = new CsvRowToRealEstateCsvRecordConverter(headerMap);
+            // Create our row -> record converter for this CSV, providing the headerMap
+            CsvRowToRealEstateCsvRecordConverter csvRowConverter =
+                    new CsvRowToRealEstateCsvRecordConverter(headerMap);
 
-            // Process each row (starting after the header)
-            log.info("Total physical lines (including header): {}", allRows.size());
+            // Now iterate over each data row
             for (int rowNum = 1; rowNum < allRows.size(); rowNum++) {
                 totalRows++;
                 String[] row = allRows.get(rowNum);
+
                 try {
-                    // Convert CSV row to DTO using the converter.
-                    RealEstateCsvRecord record = rowConverter.convert(row);
+                    // Step 1: convert the raw row (String[]) to RealEstateCsvRecord
+                    RealEstateCsvRecord record = csvRowConverter.convert(row);
 
-                    // If latitude/longitude are missing, try to obtain them.
-                    if (record.getLatitude() == null || record.getLongitude() == null) {
-                        // Build full address and sanitize it (remove reserved characters)
-                        String fullAddr = record.getAddress() + ", " + record.getCity() + ", " + record.getState() + ", " + record.getZip();
-                        String sanitizedAddress = sanitizeAddress(fullAddr);
-
-                        try {
-                            // First, try the Census Geocoder API.
-                            CensusGeocodeResponse censusResponse = censusGeocoderClient.geocode(sanitizedAddress, "4", "json");
-                            if (censusResponse != null &&
-                                    censusResponse.getResult() != null &&
-                                    censusResponse.getResult().getAddressMatches() != null &&
-                                    !censusResponse.getResult().getAddressMatches().isEmpty()) {
-                                // Use the first match (Census returns coordinates as x (lon) and y (lat))
-                                CensusGeocodeResponse.AddressMatch match = censusResponse.getResult().getAddressMatches().get(0);
-                                record.setLatitude(BigDecimal.valueOf(match.getCoordinates().getY()));
-                                record.setLongitude(BigDecimal.valueOf(match.getCoordinates().getX()));
-                            } else {
-                                throw new Exception("Census geocoder returned no match");
-                            }
-                        } catch (Exception ex) {
-                            log.warn("Census geocoder failed for address '{}': {}. Falling back to Utah Gov Maps API.",
-                                    record.getAddress(), ex.getMessage());
-                            // Fallback: call Utah Gov Maps API
-                            try {
-                                String geocodeAddress = sanitizeAddress(record.getAddress());
-                                // Here, the actual API call is replaced with dummy data.
-                                // TODO: Uncomment the real API call once ready.
-                                 UtahGeocodeResponse utahResponse = utahMapServiceClient.geocode(geocodeAddress, record.getZip(), mapservUtahApiKey);
-//                                UtahGeocodeResponse utahResponse = new UtahGeocodeResponse();
-//                                UtahGeocodeResponse.Result resultt = new UtahGeocodeResponse.Result();
-//                                UtahGeocodeResponse.Location location = new UtahGeocodeResponse.Location();
-//
-//                                location.setX(447480.4519172386);
-//                                location.setY(4437423.661806457);
-//                                resultt.setLocation(location);
-//                                utahResponse.setResult(resultt);
-//                                utahResponse.setStatus(200);
-
-                                UTAH_MAPS_CALLS_COUNTER++;
-                                if (utahResponse == null || utahResponse.getStatus() != 200) {
-                                    throw new Exception("Utah Gov Maps geocoder failed");
-                                }
-                                double x = utahResponse.getResult().getLocation().getX();
-                                double y = utahResponse.getResult().getLocation().getY();
-                                // Convert UTM (x,y) to latitude/longitude
-                                double[] latLon = UTMConverter.convertUTMToLatLon(x, y);
-                                record.setLatitude(BigDecimal.valueOf(latLon[0]));
-                                record.setLongitude(BigDecimal.valueOf(latLon[1]));
-                            } catch (Exception innerEx) {
-                                RealEstateCsvErrorDto errorDto = new RealEstateCsvErrorDto();
-                                errorDto.setRowNumber(rowNum + 1);
-                                errorDto.setMlsNumber(record.getMlsNumber());
-                                errorDto.setAddress(record.getAddress());
-                                errorDto.setErrorMessage("Geocoding error (both Census and Utah): " + innerEx.getMessage().replaceAll("apiKey=[^&]+", ""));
-                                errorList.add(errorDto);
-                                continue;  // Skip this row
-                            }
-                        }
+                    // Implement your business logic rules:
+                    // e.g. skip if Verified == true
+                    if (Boolean.TRUE.equals(record.getVerified())) {
+                        skipRow(errorList, unsavedRows, row, headerMap, rowNum, record.getMlsNumber(),
+                                "Verified=true, skipping row");
+                        continue;
                     }
 
-                    // Convert the DTO record to a RealEstate entity using the converter.
-                    RealEstate realEstate = recordToEntityConverter.convert(record);
+                    // Must have MLS#
+                    if (record.getMlsNumber() == null || record.getMlsNumber().isBlank()) {
+                        skipRow(errorList, unsavedRows, row, headerMap, rowNum, null,
+                                "Missing MLS#, skipping row");
+                        continue;
+                    }
 
-                    // Look up an existing record by MLS Number (which is unique).
-                    Optional<RealEstate> existingOpt = realEstateRepository.findByMlsNumber(record.getMlsNumber());
-                    if (existingOpt.isPresent()) {
-                        if ("SOLD".equalsIgnoreCase(existingOpt.get().getStatus())) {
-                            // Do not update records that are marked SOLD.
+                    // If lat/lng missing => attempt geocoding
+                    if (record.getLatitude() == null || record.getLongitude() == null) {
+                        fillMissingLatLong(record, row, headerMap, rowNum, errorList, unsavedRows);
+                        if (record.getLatitude() == null || record.getLongitude() == null) {
+                            // still missing => skip this row
                             continue;
                         }
-                        // For updates, preserve the existing ID so that the record is updated.
-                        realEstate.setId(existingOpt.get().getId());
                     }
-                    // Save the real estate record (new or updated).
-                    realEstateRepository.save(realEstate);
+
+                    // Step 2: convert RealEstateCsvRecord -> RealEstate entity
+                    RealEstate incoming = recordToEntityConverter.convert(record);
+
+                    // If there's an existing record by MLS#, we update
+                    Optional<RealEstate> existingOpt =
+                            realEstateRepository.findByMlsNumber(record.getMlsNumber());
+                    if (existingOpt.isPresent()) {
+                        RealEstate existing = existingOpt.get();
+                        // Merge the new data
+                        realEstateUpdateConverter.updateFields(existing, incoming);
+                        realEstateRepository.save(existing);
+                        updatedCount++;
+                    } else {
+                        // Create new
+                        realEstateRepository.save(incoming);
+                        createdCount++;
+                    }
                     processedRows++;
                 } catch (Exception ex) {
                     log.error("Error processing row {}: {}", rowNum + 1, ex.getMessage());
                     RealEstateCsvErrorDto errorDto = new RealEstateCsvErrorDto();
                     errorDto.setRowNumber(rowNum + 1);
-                    errorDto.setMlsNumber(getValue(row, headerMap, "mls#"));
-                    errorDto.setAddress(getValue(row, headerMap, "address"));
+                    errorDto.setMlsNumber(getCellValue(row, headerMap, "mls#"));
+                    String address = getCellValue(row, headerMap, "Address") +
+                            ", " + getCellValue(row, headerMap, "City") +
+                            ", " + getCellValue(row, headerMap, "State") +
+                            ", " + getCellValue(row, headerMap, "Zip");
+                    errorDto.setAddress(address);
                     errorDto.setErrorMessage("Processing error: " + ex.getMessage());
                     errorList.add(errorDto);
+
+                    // Also add the entire row to unsaved
+                    unsavedRows.add(row);
                 }
             }
+
         } catch (Exception e) {
+            // If something fails reading the file entirely
             log.error("Failed to process CSV file: {}", e.getMessage());
             RealEstateCsvErrorDto errorDto = new RealEstateCsvErrorDto();
             errorDto.setRowNumber(0);
             errorDto.setErrorMessage("Failed to process CSV file: " + e.getMessage());
             errorList.add(errorDto);
         }
+
+        // Fill in the summary
         result.setTotalRows(totalRows);
         result.setProcessedRows(processedRows);
         result.setErrors(errorList);
+        result.setUnsavedRows(unsavedRows);
 
-        log.info("UTAH_MAPS_CALLS_COUNTER: {}", UTAH_MAPS_CALLS_COUNTER);
+        // If you'd like to display these in the UI:
+        result.setUpdatedCount(updatedCount);
+        result.setCreatedCount(createdCount);
         return result;
     }
 
     /**
-     * Sanitizes an address by removing reserved characters (such as ?, #, @, etc.)
-     * that may cause the request URL to fail.
-     *
-     * @param address the input address string
-     * @return a sanitized address string
+     * If lat/lng are missing, attempt geocoding. If it still fails, mark row as skipped.
      */
-    private String sanitizeAddress(String address) {
-        if (address == null) return null;
-        return address.replaceAll("[\\?\\#\\@]", "");
+    private void fillMissingLatLong(RealEstateCsvRecord record,
+                                    String[] row,
+                                    Map<String, Integer> headerMap,
+                                    int rowNum,
+                                    List<RealEstateCsvErrorDto> errorList,
+                                    List<String[]> unsavedRows) {
+        try {
+            String fullAddr = (record.getAddress() + ", " +
+                    record.getCity() + ", " +
+                    record.getState() + ", " +
+                    record.getZip()).replaceAll("null", "").trim();
+            String sanitized = sanitizeAddress(fullAddr);
+
+            // Try Census first
+            tryCensusGeocode(record, sanitized);
+
+            // If still missing lat/lng, try Utah
+            if (record.getLatitude() == null || record.getLongitude() == null) {
+                tryUtahGeocode(record, sanitizeAddress(record.getAddress()), record.getZip());
+            }
+
+            // If STILL missing lat/lng, skip
+            if (record.getLatitude() == null || record.getLongitude() == null) {
+                skipRow(errorList, unsavedRows, row, headerMap, rowNum,
+                        record.getMlsNumber(),
+                        "No lat/lng after geocoding");
+            }
+        } catch (Exception ex) {
+            skipRow(errorList, unsavedRows, row, headerMap, rowNum,
+                    record.getMlsNumber(),
+                    "Geocoding error: " + ex.getMessage());
+        }
     }
 
-    /**
-     * Helper: retrieves a column value by name from a raw CSV row using the header map.
-     *
-     * @param row        the CSV row
-     * @param headerMap  mapping from header names to column indices
-     * @param columnName the column name to retrieve
-     * @return the trimmed value from the row or null if not present
-     */
-    private String getValue(String[] row, Map<String, Integer> headerMap, String columnName) {
+    private void tryCensusGeocode(RealEstateCsvRecord record, String address) {
+        try {
+            CensusGeocodeResponse resp = censusGeocoderClient.geocode(address, "4", "json");
+            if (resp != null && resp.getResult() != null &&
+                    resp.getResult().getAddressMatches() != null &&
+                    !resp.getResult().getAddressMatches().isEmpty()) {
+                CensusGeocodeResponse.AddressMatch match = resp.getResult().getAddressMatches().get(0);
+                record.setLatitude(BigDecimal.valueOf(match.getCoordinates().getY()));
+                record.setLongitude(BigDecimal.valueOf(match.getCoordinates().getX()));
+            }
+        } catch (Exception e) {
+            log.warn("Census geocode failed for {}: {}", address, e.getMessage());
+        }
+    }
+
+    private void tryUtahGeocode(RealEstateCsvRecord record, String address, String zip) {
+        try {
+            UtahGeocodeResponse utahResp = utahMapServiceClient.geocode(address, zip, mapservUtahApiKey);
+            if (utahResp != null && utahResp.getStatus() == 200) {
+                double x = utahResp.getResult().getLocation().getX();
+                double y = utahResp.getResult().getLocation().getY();
+                double[] latLon = UTMConverter.convertUTMToLatLon(x, y);
+                record.setLatitude(BigDecimal.valueOf(latLon[0]));
+                record.setLongitude(BigDecimal.valueOf(latLon[1]));
+            }
+        } catch (Exception e) {
+            log.warn("Utah geocode failed for {}, zip {}: {}", address, zip, e.getMessage());
+        }
+    }
+
+    private String sanitizeAddress(String address) {
+        if (address == null) return "";
+        return address.replaceAll("[?#@]", "");
+    }
+
+    private void skipRow(List<RealEstateCsvErrorDto> errorList,
+                         List<String[]> unsavedRows,
+                         String[] row,
+                         Map<String, Integer> headerMap,
+                         int rowNum,
+                         String mlsNumber,
+                         String reason) {
+        log.warn("Skipping row {}: {}", rowNum + 1, reason);
+        RealEstateCsvErrorDto errorDto = new RealEstateCsvErrorDto();
+        errorDto.setRowNumber(rowNum + 1);
+        errorDto.setMlsNumber(mlsNumber);
+        String address = getCellValue(row, headerMap, "Address") +
+                ", " + getCellValue(row, headerMap, "City") +
+                ", " + getCellValue(row, headerMap, "State") +
+                ", " + getCellValue(row, headerMap, "Zip");
+        errorDto.setAddress(address);
+        errorDto.setErrorMessage(reason);
+        errorList.add(errorDto);
+
+        unsavedRows.add(row);
+    }
+
+    private String getCellValue(String[] row, Map<String, Integer> headerMap, String columnName) {
+        if (row == null || headerMap == null) return null;
         Integer index = headerMap.get(columnName.toLowerCase());
         if (index == null || index >= row.length) return null;
         return row[index].trim();

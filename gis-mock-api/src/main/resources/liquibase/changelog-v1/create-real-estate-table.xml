@@ -26,7 +26,7 @@
             <column name="sold_date" type="DATE"/>
             <column name="sold_terms" type="TEXT"/>
             <column name="sold_price" type="VARCHAR(50)"/>
-            <column name="sold_concessions" type="VARCHAR(50)"/>
+            <column name="sold_concessions" type="TEXT"/>
             <column name="list_price" type="VARCHAR(50)"/>
             <column name="original_list_price" type="VARCHAR(50)"/>
             <column name="under_contract_date" type="DATE"/>
@@ -36,7 +36,7 @@
             <column name="off_market_date" type="DATE"/>
             <column name="reinstated_date" type="DATE"/>
             <column name="cancel_date" type="DATE"/>
-            <column name="offer_under_3rd_party_review" type="VARCHAR(10)"/>
+            <column name="offer_under_3rd_party_review" type="VARCHAR(50)"/>
             <column name="price_increase_date" type="DATE"/>
             <column name="price_increase_days_back" type="INTEGER"/>
             <column name="price_reduction_date" type="DATE"/>
@@ -45,8 +45,8 @@
             <column name="withdrawal_date" type="DATE"/>
             <column name="expire_date" type="DATE"/>
             <column name="acres" type="DECIMAL(5,2)"/>
-            <column name="property_type" type="VARCHAR(100)"/>
-            <column name="style" type="VARCHAR(100)"/>
+            <column name="property_type" type="VARCHAR(200)"/>
+            <column name="style" type="TEXT"/>
             <column name="year_built" type="INTEGER"/>
             <column name="gross_living_area_gla" type="INTEGER"/>
             <column name="total_square_feet" type="INTEGER"/>
@@ -70,12 +70,12 @@
             <column name="garage_parking" type="TEXT"/>
             <column name="decks" type="INTEGER"/>
             <column name="solar" type="BOOLEAN"/>
-            <column name="solar_ownership" type="VARCHAR(50)"/>
+            <column name="solar_ownership" type="TEXT"/>
             <column name="total_fireplaces" type="INTEGER"/>
             <column name="landscape" type="TEXT"/>
             <column name="pool_available" type="BOOLEAN"/>
             <column name="pool_details" type="TEXT"/>
-            <column name="hoa_fee" type="VARCHAR(50)"/>
+            <column name="hoa_fee" type="TEXT"/>
             <column name="hoa_amenities" type="TEXT"/>
             <column name="hoa_remarks" type="TEXT"/>
             <column name="main_floor_square_feet" type="INTEGER"/>
@@ -83,8 +83,8 @@
             <column name="third_floor_square_feet" type="INTEGER"/>
             <column name="fourth_floor_square_feet" type="INTEGER"/>
             <column name="exterior_features" type="TEXT"/>
-            <column name="floor" type="VARCHAR(50)"/>
-            <column name="county" type="VARCHAR(100)"/>
+            <column name="floor" type="TEXT"/>
+            <column name="county" type="TEXT"/>
             <column name="interior_features" type="TEXT"/>
             <column name="public_remarks" type="TEXT"/>
             <column name="bac_compensation" type="TEXT"/>

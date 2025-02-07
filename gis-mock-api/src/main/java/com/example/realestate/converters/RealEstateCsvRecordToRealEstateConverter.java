@@ -107,7 +107,6 @@ public class RealEstateCsvRecordToRealEstateConverter implements Converter<RealE
                 .longitude(record.getLongitude())
                 .legal(record.getLegal())
                 .verified(record.getVerified())
-                .daysBack(record.getDaysBack())
                 .legalMatchToTax(record.getLegalMatchToTax())
                 .countyRecordLink(record.getCountyRecordLink())
                 .htmlBodyTd(record.getHtmlBodyTd())

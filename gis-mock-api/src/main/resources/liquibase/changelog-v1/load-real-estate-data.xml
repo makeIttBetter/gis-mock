@@ -109,7 +109,6 @@
             <column name="longitude" header="Longitude"/>
             <column name="legal" header="Legal"/>
             <column name="verified" header="Verified"/>
-            <column name="days_back" header="Days Back"/>
             <column name="legal_match_to_tax" header="LegalMatchToTax"/>
             <column name="county_record_link" header="CountyRecordLink"/>
             <column name="html_body_td" header="/html/body/table/tbody/tr/td/table/tbody/tr[4]/td[2]"/>
