@@ -1,5 +1,6 @@
-package com.example.realestate.converters;
+package com.example.realestate.converters.upload;
 
+import com.example.realestate.converters.Converter;
 import com.example.realestate.dto.RealEstateCsvRecord;
 import lombok.extern.slf4j.Slf4j;
 

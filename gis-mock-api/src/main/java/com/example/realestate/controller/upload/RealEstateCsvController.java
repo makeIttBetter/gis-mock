@@ -1,4 +1,4 @@
-package com.example.realestate.controller;
+package com.example.realestate.controller.upload;
 
 import com.example.realestate.dto.RealEstateCsvUploadResult;
 import com.example.realestate.service.RealEstateCsvService;

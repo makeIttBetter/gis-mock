@@ -1,4 +1,4 @@
-package com.example.realestate.client;
+package com.example.realestate.client.utahmap;
 
 import com.example.realestate.dto.UtahGeocodeResponse;
 import org.springframework.cloud.openfeign.FeignClient;

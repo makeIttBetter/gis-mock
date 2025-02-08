@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- ChangeSet 1: Create the ROLES table -->
+    <changeSet id="1" author="dev">
+        <createTable tableName="roles">
+            <column name="id" type="VARCHAR(36)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- Optional auditing columns -->
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="name" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ChangeSet 2: Create the USERS table -->
+    <changeSet id="2" author="dev">
+        <createTable tableName="users">
+            <column name="id" type="VARCHAR(36)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- Optional auditing columns -->
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="username" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider" type="VARCHAR(255)"/>
+            <column name="is_email_verified" type="BOOLEAN" defaultValueBoolean="false"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ChangeSet 3: Create the USERS_ROLES join table -->
+    <changeSet id="3" author="dev">
+        <createTable tableName="users_roles">
+            <column name="user_id" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_id" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey
+                tableName="users_roles"
+                columnNames="user_id,role_id"
+                constraintName="pk_users_roles"/>
+        <addForeignKeyConstraint
+                baseTableName="users_roles"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_users_roles_user"/>
+        <addForeignKeyConstraint
+                baseTableName="users_roles"
+                baseColumnNames="role_id"
+                referencedTableName="roles"
+                referencedColumnNames="id"
+                constraintName="fk_users_roles_role"/>
+    </changeSet>
+
+    <!-- ChangeSet 4: Load data into the ROLES table from CSV -->
+    <changeSet id="4" author="dev">
+        <loadData
+                file="liquibase/data/v1/roles.csv"
+                tableName="roles"
+                separator=","
+                encoding="UTF-8"/>
+    </changeSet>
+
+    <!-- ChangeSet 5: Load data into the USERS table from CSV -->
+    <changeSet id="5" author="dev">
+        <loadData
+                file="liquibase/data/v1/users.csv"
+                tableName="users"
+                separator=","
+                encoding="UTF-8"/>
+    </changeSet>
+
+    <!-- ChangeSet 6: Load data into the USERS_ROLES join table from CSV -->
+    <changeSet id="6" author="dev">
+        <loadData
+                file="liquibase/data/v1/users_roles.csv"
+                tableName="users_roles"
+                separator=","
+                encoding="UTF-8"/>
+    </changeSet>
+
+</databaseChangeLog>

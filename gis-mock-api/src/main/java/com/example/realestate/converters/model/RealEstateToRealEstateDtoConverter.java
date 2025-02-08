@@ -1,5 +1,6 @@
-package com.example.realestate.converters;
+package com.example.realestate.converters.model;
 
+import com.example.realestate.converters.Converter;
 import com.example.realestate.dto.RealEstateDto;
 import com.example.realestate.model.RealEstate;
 import lombok.extern.slf4j.Slf4j;

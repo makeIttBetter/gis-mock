@@ -1,5 +1,6 @@
-package com.example.realestate.converters;
+package com.example.realestate.converters.model;
 
+import com.example.realestate.converters.Converter;
 import com.example.realestate.dto.CoordinateDto;
 import com.example.realestate.dto.PolygonDto;
 import com.example.realestate.model.Polygon;

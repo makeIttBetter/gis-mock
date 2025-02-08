@@ -1,6 +1,6 @@
 package com.example.realestate.service;
 
-import com.example.realestate.client.ArcgisClient;
+import com.example.realestate.client.arcgis.ArcgisClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,13 +17,11 @@ import java.util.Map;
 @Service
 public class ArcgisLayerService {
 
+    private final ArcgisClient arcgisClient;
     @Value("${arcgis.username}")
     private String arcgisUsername;
-
     @Value("${arcgis.api.key}")
     private String arcgisApiKey;
-
-    private final ArcgisClient arcgisClient;
 
     public ArcgisLayerService(ArcgisClient arcgisClient) {
         this.arcgisClient = arcgisClient;

@@ -20,7 +20,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 log.info("Configuring CORS for allowed origins: {}", (Object) allowedOriginUrls);
-                registry.addMapping("/api/**") // Apply to all API endpoints
+                registry.addMapping("/**") // Apply to all API endpoints
                         .allowedOrigins(allowedOriginUrls) // Allow this origin
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allow these HTTP methods
                         .allowedHeaders("*") // Allow all headers

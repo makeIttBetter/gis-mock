@@ -12,11 +12,10 @@ import java.util.Set;
 @Service
 public class RealEstateFilterOptionsService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
     // Only allow filtering on these fields
     private final Set<String> allowedFields = Set.of("city", "state", "status", "propertyType", "style");
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public List<String> getDistinctValues(String fieldName) {
         if (!allowedFields.contains(fieldName)) {

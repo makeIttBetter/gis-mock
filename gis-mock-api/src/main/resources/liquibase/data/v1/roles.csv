@@ -1,0 +1,3 @@
+id,created_at,updated_at,name,description
+ROLE-ADMIN-UUID,,,"ADMIN","Administrator role"
+ROLE-USER-UUID,,,"USER","Standard user role"

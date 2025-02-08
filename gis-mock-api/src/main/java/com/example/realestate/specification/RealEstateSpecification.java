@@ -176,6 +176,7 @@ public class RealEstateSpecification {
             CriteriaBuilder cb,
             RealEstateFilterDto filter
     ) {
+
         if (filter.getYearBuiltMin() != null) {
             return cb.and(predicate,
                     cb.greaterThanOrEqualTo(root.get("yearBuilt"), filter.getYearBuiltMin())

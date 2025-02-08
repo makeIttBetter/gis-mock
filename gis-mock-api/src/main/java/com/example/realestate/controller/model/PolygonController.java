@@ -1,4 +1,4 @@
-package com.example.realestate.controller;
+package com.example.realestate.controller.model;
 
 import com.example.realestate.dto.PolygonCreateDto;
 import com.example.realestate.dto.PolygonDto;

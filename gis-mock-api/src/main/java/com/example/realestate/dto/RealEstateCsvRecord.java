@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 @Data
 public class RealEstateCsvRecord {
-//    private String id;
+    //    private String id;
     private String mlsNumber;
     private String taxId;
     private String address;

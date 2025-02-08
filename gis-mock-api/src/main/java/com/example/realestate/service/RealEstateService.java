@@ -1,6 +1,6 @@
 package com.example.realestate.service;
 
-import com.example.realestate.converters.RealEstateToRealEstateDtoConverter;
+import com.example.realestate.converters.model.RealEstateToRealEstateDtoConverter;
 import com.example.realestate.dto.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -71,6 +72,15 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
                 .map(realEstateConverter::convert)
                 .collect(Collectors.toList());
     }
+
+    // In RealEstateService.java, add this method:
+    public List<RealEstate> getRealEstateEntitiesByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return realEstateRepository.findAllById(ids);
+    }
+
 
     /**
      * Our existing method that returns ALL filtered real estate

@@ -7,7 +7,7 @@
 
     <changeSet id="load-real-estate-csv-data" author="dev">
         <loadData
-                file="classpath:liquibase/changelog-v1/data.csv"
+                file="classpath:liquibase/data/v1/data.csv"
                 tableName="real_estate"
                 separator=","
                 encoding="UTF-8">

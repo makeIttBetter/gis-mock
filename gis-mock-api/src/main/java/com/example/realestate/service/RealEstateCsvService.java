@@ -1,10 +1,10 @@
 package com.example.realestate.service;
 
 import com.example.realestate.client.CensusGeocoderClient;
-import com.example.realestate.client.UtahMapServiceClient;
-import com.example.realestate.converters.CsvRowToRealEstateCsvRecordConverter;
-import com.example.realestate.converters.RealEstateCsvRecordToRealEstateConverter;
-import com.example.realestate.converters.RealEstateUpdateConverter;
+import com.example.realestate.client.utahmap.UtahMapServiceClient;
+import com.example.realestate.converters.model.RealEstateUpdateConverter;
+import com.example.realestate.converters.upload.CsvRowToRealEstateCsvRecordConverter;
+import com.example.realestate.converters.upload.RealEstateCsvRecordToRealEstateConverter;
 import com.example.realestate.dto.*;
 import com.example.realestate.model.RealEstate;
 import com.example.realestate.repository.RealEstateRepository;

@@ -1,5 +1,5 @@
 // File: src/main/java/com/example/realestate/client/ArcgisClientConfig.java
-package com.example.realestate.client;
+package com.example.realestate.client.arcgis;
 
 import feign.Logger;
 import feign.RequestInterceptor;

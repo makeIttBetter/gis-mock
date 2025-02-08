@@ -1,5 +1,5 @@
 // File: src/main/java/com/example/realestate/client/ArcgisClient.java
-package com.example.realestate.client;
+package com.example.realestate.client.arcgis;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;

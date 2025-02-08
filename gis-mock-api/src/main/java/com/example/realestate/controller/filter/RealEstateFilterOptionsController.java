@@ -1,5 +1,5 @@
 // File: src/main/java/com/example/realestate/controller/RealEstateFilterOptionsController.java
-package com.example.realestate.controller;
+package com.example.realestate.controller.filter;
 
 import com.example.realestate.service.RealEstateFilterOptionsService;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.example.realestate.converters;
+package com.example.realestate.converters.model;
 
 import com.example.realestate.model.RealEstate;
 import lombok.extern.slf4j.Slf4j;

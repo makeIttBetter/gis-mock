@@ -1,5 +1,5 @@
-// src/lib/polygonApi.ts
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
+// File: src/lib/polygonApi.ts
+import { apiGet, apiPost, apiPut, apiDelete, apiPostPath } from "@/lib/api";
 import { PolygonDTO } from "@/interfaces/PolygonDTO";
 
 /**
@@ -13,7 +13,6 @@ export async function fetchPolygons(): Promise<PolygonDTO[]> {
  * Fetch a single polygon by its ID.
  */
 export async function fetchPolygonById(id: string): Promise<PolygonDTO> {
-    // Use the generic apiGet with the URL extension.
     return apiGet<PolygonDTO>("POLYGONS", { id });
 }
 
@@ -25,11 +24,7 @@ export async function createPolygon(
     coordinates: Array<{ lat: number; lng: number }>,
     realEstateIds: string[]
 ): Promise<PolygonDTO> {
-    return apiPost<PolygonDTO>("POLYGONS", {
-        name,
-        coordinates,
-        realEstateIds,
-    });
+    return apiPost<PolygonDTO>("POLYGONS", { name, coordinates, realEstateIds });
 }
 
 /**
@@ -48,3 +43,13 @@ export async function updatePolygon(
 export async function deletePolygon(id: string): Promise<boolean> {
     return apiDelete("POLYGONS", id);
 }
+
+/**
+ * Export the attached real estate objects to Google Sheets, returning the final sheet URL.
+ */
+export async function exportPolygonToGoogleSheets(id: string): Promise<string> {
+    // Use apiPostPath: base endpoint is POLYGONS and we append `${id}/export/google-sheets`
+    const response = await apiPostPath<{ sheetUrl: string }>("POLYGONS", `${id}/export/google-sheets`, {});
+    return response.sheetUrl;
+}
+

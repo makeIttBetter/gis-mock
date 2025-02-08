@@ -1,7 +1,7 @@
 package com.example.realestate.service;
 
-import com.example.realestate.converters.PolygonCreateDtoToPolygonConverter;
-import com.example.realestate.converters.PolygonToPolygonDtoConverter;
+import com.example.realestate.converters.model.PolygonCreateDtoToPolygonConverter;
+import com.example.realestate.converters.model.PolygonToPolygonDtoConverter;
 import com.example.realestate.dto.PolygonCreateDto;
 import com.example.realestate.dto.PolygonDto;
 import com.example.realestate.model.Polygon;
