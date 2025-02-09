@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- Create the link table between polygons and real_estate, many-to-many. -->
+    <changeSet id="create-polygon-real-estate-table" author="dev">
+        <createTable tableName="polygon_real_estate">
+            <!-- New surrogate primary key column -->
+            <column name="id" type="VARCHAR(36)">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_polygon_real_estate"/>
+            </column>
+            <column name="polygon_id" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="real_estate_id" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <!-- Add a unique constraint to ensure no duplicate combinations of polygon_id and real_estate_id -->
+        <addUniqueConstraint
+                tableName="polygon_real_estate"
+                columnNames="polygon_id,real_estate_id"
+                constraintName="uk_polygon_real_estate_polygonId_realEstateId"/>
+
+        <!-- Add foreign key constraints -->
+        <addForeignKeyConstraint
+                baseTableName="polygon_real_estate"
+                baseColumnNames="polygon_id"
+                referencedTableName="polygon"
+                referencedColumnNames="id"
+                constraintName="fk_polygon_real_estate_polygon"/>
+
+        <addForeignKeyConstraint
+                baseTableName="polygon_real_estate"
+                baseColumnNames="real_estate_id"
+                referencedTableName="real_estate"
+                referencedColumnNames="id"
+                constraintName="fk_polygon_real_estate_real_estate"/>
+
+        <!-- Add indexes for performance -->
+        <createIndex indexName="idx_polygon_id" tableName="polygon_real_estate">
+            <column name="polygon_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_real_estate_id" tableName="polygon_real_estate">
+            <column name="real_estate_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

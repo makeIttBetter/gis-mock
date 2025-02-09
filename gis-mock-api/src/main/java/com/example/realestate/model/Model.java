@@ -1,5 +1,7 @@
+// File: src/main/java/com/example/realestate/model/Model.java
 package com.example.realestate.model;
 
+import com.example.realestate.annotations.ExportField;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
@@ -22,12 +24,15 @@ public abstract class Model implements Serializable {
     @Serial
     private static final long serialVersionUID = 7945147474269998569L;
 
+    @ExportField(fieldName = "id", displayName = "ID")
     @Id
     private String id;
 
+    @ExportField(fieldName = "created_at", displayName = "Created at")
     @CreatedDate
     private LocalDateTime createdAt;
 
+    @ExportField(fieldName = "updated_at", displayName = "Updated at")
     @LastModifiedDate
     private LocalDateTime updatedAt;
 

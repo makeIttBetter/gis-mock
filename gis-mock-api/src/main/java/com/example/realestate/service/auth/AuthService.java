@@ -37,14 +37,11 @@ public class AuthService {
         if (userRepository.existsByUsername(username)) {
             throw new UserAlreadyExistsException("Username already taken: " + username);
         }
-        if (userRepository.existsByEmail(email)) {
-            throw new UserAlreadyExistsException("Email already used: " + email);
-        }
 
         // Create new user
         User newUser = new User();
         newUser.setUsername(username);
-        newUser.setEmail(email);
+        newUser.setUsername(email);
         // encode the password
         newUser.setPassword(passwordEncoder.encode(rawPassword));
         newUser.setProvider("none");
@@ -64,7 +61,7 @@ public class AuthService {
                             loginRequest.getPassword()));
 
             // Now find the user
-            User user = userRepository.findByUsernameOrEmail(loginRequest.getUsername());
+            User user = userRepository.findByUsername(loginRequest.getUsername());
             if (user == null) {
                 throw new UserNotFoundException("User not found: " + loginRequest.getUsername());
             }

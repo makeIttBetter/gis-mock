@@ -26,12 +26,16 @@ public class Polygon extends Model {
     @Column(name = "real_estate_ids", columnDefinition = "TEXT")
     private String realEstateIds;
 
-    // Field for the ArcGIS dataset/item ID
     @Column(name = "arcgis_layer_id")
     private String arcgisLayerId;
 
-    // NEW: Field for the ArcGIS polygon layer ID
-    // (added via the new Liquibase changeset).
     @Column(name = "arcgis_polygon_id")
     private String arcgisPolygonId;
+
+    /**
+     * NEW: references the current user who owns this polygon.
+     * We store the user’s UUID from the `users` table.
+     */
+    @Column(name = "user_id", nullable = false)
+    private String userId;
 }

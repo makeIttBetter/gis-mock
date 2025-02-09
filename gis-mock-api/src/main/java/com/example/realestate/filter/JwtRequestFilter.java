@@ -19,6 +19,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * This filter checks every incoming HTTP request for a JWT in the Authorization header.
+ * If present and valid, it sets up the SecurityContext so the user is authenticated.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -36,37 +40,50 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String username = null;
         String jwtToken = null;
 
-        // Get JWT from cookie instead of header
+//       ORIGINAL: HttpOnly Cookie
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if ("jwtToken".equals(cookie.getName())) {
                     jwtToken = cookie.getValue();
+                    try {
+                        username = jwtUtil.extractUsername(jwtToken);
+                    } catch (ExpiredJwtException e) {
+                        log.error("JWT token is expired: {}", e.getMessage());
+                    } catch (Exception e) {
+                        log.error("Error parsing JWT token: {}", e.getMessage());
+                    }
                     break;
                 }
             }
         }
 
-        if (jwtToken != null) {
-            try {
-                username = jwtUtil.extractUsername(jwtToken);
-            } catch (ExpiredJwtException e) {
-                log.error("JWT token is expired: {}", e.getMessage());
-            } catch (Exception e) {
-                log.error("Error parsing JWT token: {}", e.getMessage());
-            }
-        }
+//        ALTERNATIVE: Authorization Header
+//        final String authHeader = request.getHeader("Authorization");
+//        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+//            jwtToken = authHeader.substring(7); // remove "Bearer "
+//            try {
+//                username = jwtUtil.extractUsername(jwtToken);
+//            } catch (ExpiredJwtException e) {
+//                log.error("JWT token is expired: {}", e.getMessage());
+//            } catch (Exception e) {
+//                log.error("Error parsing JWT token: {}", e.getMessage());
+//            }
+//        }
 
-        // Rest of the code remains the same...
+        // If we got a username and no authentication yet in SecurityContext
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
             log.info("Loaded user details for username: {}", username);
 
+            // Validate the token
             if (jwtUtil.validateToken(jwtToken, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
                 log.info("Authenticated user: {}", username);
             }

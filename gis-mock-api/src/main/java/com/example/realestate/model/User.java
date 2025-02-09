@@ -1,8 +1,10 @@
 package com.example.realestate.model;
 
-import com.example.realestate.model.Model; // your base class for ID, createdAt, updatedAt
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.util.HashSet;
@@ -22,10 +24,7 @@ import java.util.Set;
 public class User extends Model {
 
     @Column(unique = true, nullable = false)
-    private String username;  // or you can use "email" as the unique identifier
-
-    @Column(unique = true)
-    private String email;
+    private String username;
 
     private String password;
 
@@ -39,9 +38,9 @@ public class User extends Model {
      */
     @ManyToMany(fetch = FetchType.EAGER) // EAGER or LAZY is up to you
     @JoinTable(
-        name = "users_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+            name = "users_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();
 }

@@ -7,6 +7,7 @@ import com.example.realestate.service.auth.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -60,6 +61,7 @@ public class WebSecurityConfig {
 //                .cors(Customizer.withDefaults())
                 // Our endpoint authorization rules
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Permit these endpoints without JWT
                         .requestMatchers(
                                 "/api/auth/signup",
@@ -76,7 +78,7 @@ public class WebSecurityConfig {
                         // Require authentication for everything else
                         .anyRequest().authenticated()
                 )
-
+                .httpBasic(Customizer.withDefaults())
                 // If you want to customize headers
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
 

@@ -17,8 +17,5 @@ public class UserValidator {
         if (userRepository.existsByUsername(userAuthDTO.getUsername())) {
             throw new UserAlreadyExistsException("Username already taken: " + userAuthDTO.getUsername());
         }
-        if (userRepository.existsByEmail(userAuthDTO.getEmail())) {
-            throw new UserAlreadyExistsException("Email already in use: " + userAuthDTO.getEmail());
-        }
     }
 }

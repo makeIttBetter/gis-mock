@@ -25,7 +25,7 @@ public class AuthController {
         userValidator.validateUserDoesNotExist(userAuthDTO);
         return authService.signUp(
                 userAuthDTO.getUsername(),
-                userAuthDTO.getEmail(),
+                userAuthDTO.getUsername(),
                 userAuthDTO.getPassword()
         );
     }

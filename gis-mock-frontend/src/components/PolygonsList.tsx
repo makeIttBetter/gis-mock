@@ -1,15 +1,19 @@
-// File: C:/ws/projects/GIS-Michael/gis-mock/gis-mock-frontend/src/components/PolygonsList.tsx
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { deletePolygon, exportPolygonToGoogleSheets, fetchPolygons } from "@/lib/polygonApi";
+import {
+    deletePolygon,
+    exportPolygonToGoogleSheets,
+    fetchPolygons,
+} from "@/lib/polygonApi";
 import { PolygonDTO } from "@/interfaces/PolygonDTO";
 
 export default function PolygonsList() {
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
-    const [expandedPolygonId, setExpandedPolygonId] = useState<string | null>(null);
+    const [expandedPolygonId, setExpandedPolygonId] = useState<string | null>(
+        null
+    );
 
     // Loading state for the "Export to Google Sheets" button
     const [exportLoadingId, setExportLoadingId] = useState<string | null>(null);
@@ -27,6 +31,7 @@ export default function PolygonsList() {
         loadData();
     }, []);
 
+    // Listen for other components' "polygonCreated" events so we re-fetch as needed
     useEffect(() => {
         const handlePolygonCreated = () => {
             loadData();
@@ -43,12 +48,17 @@ export default function PolygonsList() {
 
     async function handleDelete(id: string) {
         if (
-            window.confirm("Are you sure you want to delete this polygon and all its relationships?")
+            window.confirm(
+                "Are you sure you want to delete this polygon and all its relationships?"
+            )
         ) {
             try {
                 await deletePolygon(id);
                 alert("Polygon deleted");
                 loadData();
+
+                // IMPORTANT: Notify the rest of the app so it can clear the map if needed
+                window.dispatchEvent(new Event("polygonDeleted"));
             } catch (error) {
                 console.error("Error deleting polygon:", error);
                 alert("Failed to delete polygon");
@@ -56,9 +66,12 @@ export default function PolygonsList() {
         }
     }
 
-    // NEW: Handle the "Export to Google Sheets" action
     async function handleExport(id: string) {
-        if (!window.confirm("Export all attached Real Estate objects to Google Sheets?")) {
+        if (
+            !window.confirm(
+                "Export all attached Real Estate objects to Google Sheets?"
+            )
+        ) {
             return;
         }
         try {
@@ -108,7 +121,6 @@ export default function PolygonsList() {
                                 >
                                     Delete
                                 </button>
-                                {/* "Export to Google Sheets" button (far right) */}
                                 <button
                                     onClick={() => handleExport(polygon.id)}
                                     className="px-3 py-1 bg-purple-600 text-white rounded flex items-center gap-2"
@@ -133,7 +145,7 @@ export default function PolygonsList() {
                                                 className="opacity-75"
                                                 fill="currentColor"
                                                 d="M4 12a8 8 0 018-8V0C5.373
-                              0 0 5.373 0 12h4z"
+                        0 0 5.373 0 12h4z"
                                             ></path>
                                         </svg>
                                     ) : null}

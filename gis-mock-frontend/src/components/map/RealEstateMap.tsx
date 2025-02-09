@@ -1,3 +1,4 @@
+//  File: frontend/src/components/map/RealEstateMap.tsx
 "use client";
 import React, { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import {

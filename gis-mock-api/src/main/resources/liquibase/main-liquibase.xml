@@ -5,10 +5,15 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
 
-    <!-- We can group changes in separate files for clarity -->
-    <include file="liquibase/changelog-v1/create-users-roles.xml" />
-    <include file="liquibase/changelog-v1/create-real-estate-table.xml" />
-    <include file="liquibase/changelog-v1/create-polygon-table.xml" />
-    <include file="liquibase/changelog-v1/load-real-estate-data.xml" />
-    <!-- Additional versions could go here -->
+    <!-- CREATE TABLES -->
+    <include file="liquibase/changelog-v1/create-users-roles.xml"/>
+
+    <include file="liquibase/changelog-v1/create-real-estate-table.xml"/>
+    <include file="liquibase/changelog-v1/create-polygon-table.xml"/>
+    <include file="liquibase/changelog-v1/create-polygon-realestate-table.xml"/>
+
+    <!-- LOAD DATA -->
+    <include file="liquibase/changelog-v1/load-real-estate-data.xml"/>
+
+
 </databaseChangeLog>

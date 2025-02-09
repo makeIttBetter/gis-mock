@@ -7,15 +7,6 @@
 import {API_ENDPOINTS} from "@/config";
 
 /**
- * Extract the JWT token from document.cookie if present.
- */
-function getTokenFromCookie(): string | null {
-    if (typeof document === "undefined") return null;
-    const match = document.cookie.match(/(^|;\s*)jwtToken=([^;]+)/);
-    return match ? decodeURIComponent(match[2]) : null;
-}
-
-/**
  * Convert an object into a query string.
  * @param paramsObj Object with key-value pairs.
  */
@@ -41,20 +32,6 @@ function encodePath(path: string): string {
         .join("/");
 }
 
-
-/**
- * Helper to add the Authorization header if we have a JWT cookie.
- */
-function getAuthHeaders(): HeadersInit {
-    // const token = getTokenFromCookie();
-    // if (token) {
-    //     headers["Authorization"] = `Bearer ${token}`;
-    // }
-    return {
-        Accept: "application/json",
-    };
-}
-
 /**
  * Generic GET request.
  */
@@ -67,7 +44,9 @@ export async function apiGet<T>(
 
     const res = await fetch(url, {
         method: "GET",
-        headers: getAuthHeaders(), // <--- attach token if available
+        headers: {
+            "Accept": "application/json",
+        },
         credentials: "include",
     });
     if (!res.ok) {
@@ -94,7 +73,9 @@ export async function apiGetPath<T>(
 
     const res = await fetch(url, {
         method: "GET",
-        headers: getAuthHeaders(), // <--- attach token if available
+        headers: {
+            "Accept": "application/json",
+        },
         credentials: "include",
     });
     if (!res.ok) {
@@ -116,7 +97,6 @@ export async function apiPost<T>(
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            ...getAuthHeaders(), // <--- attach token if available
         },
         credentials: "include",
         body: JSON.stringify(data),
@@ -147,7 +127,6 @@ export async function apiPostPath<T>(
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            ...getAuthHeaders(), // <--- attach token if available
         },
         credentials: "include",
         body: JSON.stringify(data),
@@ -172,7 +151,6 @@ export async function apiPut<T>(
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
-            ...getAuthHeaders(), // <--- attach token if available
         },
         credentials: "include",
         body: JSON.stringify(data),
@@ -194,7 +172,7 @@ export async function apiDelete(
     const url = `${API_ENDPOINTS[endpoint]}/${id}`;
     const res = await fetch(url, {
         method: "DELETE",
-        headers: getAuthHeaders(), // <--- attach token if available
+        // headers: {},
         credentials: "include",
     });
     if (!res.ok) {
@@ -216,12 +194,16 @@ export async function apiPostFormData<T>(
     const encodedPath = encodePath(path);
     const url = `${baseUrl}/${encodedPath}`;
     const res = await fetch(url, {
-        method: "POST",
-        // Do NOT set "Content-Type", the browser sets it automatically when sending FormData.
-        headers: getAuthHeaders(), // <--- attach token if available
-        credentials: "include",
-        body: formData,
-    });
+            method: "POST",
+            // Do NOT set "Content-Type", the browser sets it automatically when sending FormData.
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body:
+            formData,
+        })
+    ;
     if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || `POST ${url} failed: ${res.status}`);

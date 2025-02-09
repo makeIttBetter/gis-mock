@@ -29,13 +29,13 @@ public class OAuth2Service {
      */
     public String handleOAuthLogin(UserAuthDTO userAuthDTO) {
         // 1) See if there's an existing user by email
-        User user = userRepository.findByEmail(userAuthDTO.getEmail());
+        User user = userRepository.findByUsername(userAuthDTO.getUsername());
 
         if (user == null) {
             // If no user, create a new one
             user = new User();
             user.setUsername(userAuthDTO.getUsername());
-            user.setEmail(userAuthDTO.getEmail());
+            user.setUsername(userAuthDTO.getUsername());
             // No real local password. If you want a random or empty, up to you
             user.setPassword(passwordEncoder.encode("oauth2user"));
             user.setProvider(userAuthDTO.getProvider());

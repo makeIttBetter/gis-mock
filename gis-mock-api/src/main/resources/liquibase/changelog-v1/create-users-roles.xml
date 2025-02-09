@@ -30,17 +30,13 @@
             <!-- Optional auditing columns -->
             <column name="created_at" type="TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP"/>
-            <column name="username" type="VARCHAR(100)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="email" type="VARCHAR(255)">
+            <column name="username" type="VARCHAR(255)">
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="password" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="provider" type="VARCHAR(255)"/>
-            <column name="is_email_verified" type="BOOLEAN" defaultValueBoolean="false"/>
         </createTable>
     </changeSet>
 
@@ -72,6 +68,21 @@
                 constraintName="fk_users_roles_role"/>
     </changeSet>
 
+    <changeSet id="Create indexes" author="dev">
+        <createIndex indexName="idx_users_email" tableName="users">
+            <column name="username"/>
+        </createIndex>
+        <createIndex indexName="idx_roles_name" tableName="roles">
+            <column name="name"/>
+        </createIndex>
+        <createIndex indexName="idx_users_roles_user_id" tableName="users_roles">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex indexName="idx_users_roles_role_id" tableName="users_roles">
+            <column name="role_id"/>
+        </createIndex>
+    </changeSet>
+
     <!-- ChangeSet 4: Load data into the ROLES table from CSV -->
     <changeSet id="4" author="dev">
         <loadData
@@ -98,5 +109,6 @@
                 separator=","
                 encoding="UTF-8"/>
     </changeSet>
+
 
 </databaseChangeLog>

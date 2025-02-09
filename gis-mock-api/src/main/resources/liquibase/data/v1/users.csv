@@ -1,2 +1,2 @@
-id,created_at,updated_at,username,email,password,provider,is_email_verified
-USER-ADMIN-UUID,,,"admin@gmail.com","admin@gmail.com","$2a$10$R1spj5w.4kVdU3Naylqj2.jlEVZb3Eyc9sdrBcc4UGxwTp7LobB5y","none",true
+id,created_at,updated_at,username,password,provider
+USER-ADMIN-UUID,,,"admin@gmail.com","$2a$10$R1spj5w.4kVdU3Naylqj2.jlEVZb3Eyc9sdrBcc4UGxwTp7LobB5y","none"

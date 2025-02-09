@@ -48,7 +48,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             UserAuthDTO userAuthDTO = new UserAuthDTO();
             userAuthDTO.setUsername(username != null ? username : email);
             userAuthDTO.setPassword(""); // no local password
-            userAuthDTO.setEmail(email);
+            userAuthDTO.setUsername(email);
             userAuthDTO.setProvider(registrationId);
 
             // Let our OAuth2Service do the rest (create or update user, produce JWT)
