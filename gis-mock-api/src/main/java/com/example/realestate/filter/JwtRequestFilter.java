@@ -5,6 +5,7 @@ import com.example.realestate.util.JwtUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +19,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * This filter checks every incoming HTTP request for a JWT in the Authorization header.
- * If present and valid, it sets up the SecurityContext so the user is authenticated.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -36,12 +33,21 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         log.info("Processing JWT for request: {}", request.getRequestURI());
 
-        final String authHeader = request.getHeader("Authorization");
         String username = null;
         String jwtToken = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwtToken = authHeader.substring(7); // remove "Bearer "
+        // Get JWT from cookie instead of header
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("jwtToken".equals(cookie.getName())) {
+                    jwtToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (jwtToken != null) {
             try {
                 username = jwtUtil.extractUsername(jwtToken);
             } catch (ExpiredJwtException e) {
@@ -51,19 +57,16 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             }
         }
 
-        // If we got a username and no authentication yet in SecurityContext
+        // Rest of the code remains the same...
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
             log.info("Loaded user details for username: {}", username);
 
-            // Validate the token
             if (jwtUtil.validateToken(jwtToken, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
-
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authToken);
                 log.info("Authenticated user: {}", username);
             }
