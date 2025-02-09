@@ -6,6 +6,7 @@ import com.example.realestate.dto.PolygonCreateDto;
 import com.example.realestate.dto.PolygonDto;
 import com.example.realestate.model.Polygon;
 import com.example.realestate.model.PolygonRealEstate;
+import com.example.realestate.model.RealEstate;
 import com.example.realestate.repository.PolygonRealEstateRepository;
 import com.example.realestate.repository.PolygonRepository;
 import com.example.realestate.service.auth.SecurityService;
@@ -26,6 +27,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
 
     private final PolygonRepository polygonRepository;
     private final PolygonRealEstateRepository polygonRealEstateRepository;
+    private final RealEstateService realEstateService;
     private final PolygonCreateDtoToPolygonConverter createConverter;
     private final PolygonToPolygonDtoConverter toDtoConverter;
     private final ObjectMapper objectMapper;
@@ -36,7 +38,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     private String layersUrl;
 
     public PolygonService(PolygonRepository polygonRepository,
-                          PolygonRealEstateRepository polygonRealEstateRepository,
+                          PolygonRealEstateRepository polygonRealEstateRepository, RealEstateService realEstateService,
                           PolygonCreateDtoToPolygonConverter createConverter,
                           PolygonToPolygonDtoConverter toDtoConverter,
                           ObjectMapper objectMapper,
@@ -45,6 +47,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     ) {
         this.polygonRepository = polygonRepository;
         this.polygonRealEstateRepository = polygonRealEstateRepository;
+        this.realEstateService = realEstateService;
         this.createConverter = createConverter;
         this.toDtoConverter = toDtoConverter;
         this.objectMapper = objectMapper;
@@ -219,6 +222,16 @@ public class PolygonService implements CrudService<PolygonDto, String> {
 
         // Finally remove polygon itself
         polygonRepository.deleteById(id);
+    }
+
+    public List<RealEstate> findAttachedRealEstates(String polygonId) {
+        log.info("Finding real estates for polygon ID: {}", polygonId);
+        List<PolygonRealEstate> links = polygonRealEstateRepository.findByPolygonId(polygonId);
+        List<String> realEstateIds = links.stream()
+                .map(PolygonRealEstate::getRealEstateId)
+                .toList();
+
+        return realEstateService.getRealEstateEntitiesByIds(realEstateIds);
     }
 
     // -----------------------------------------------------------------------
