@@ -1,7 +1,7 @@
 package com.example.realestate.converters.model;
 
-import com.example.realestate.dto.CoordinateDto;
-import com.example.realestate.dto.PolygonDto;
+import com.example.realestate.dto.model.CoordinateDto;
+import com.example.realestate.dto.model.PolygonDto;
 import com.example.realestate.model.Polygon;
 import com.example.realestate.model.PolygonRealEstate;
 import com.example.realestate.repository.PolygonRealEstateRepository;
@@ -41,7 +41,7 @@ public class PolygonToPolygonDtoConverter implements Converter<Polygon, PolygonD
         }
         dto.setCoordinates(coords);
 
-        // Convert dateCreated, dateUpdated to a string
+        // Convert creation/update timestamps
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (source.getCreatedAt() != null) {
             dto.setDateCreated(source.getCreatedAt().format(fmt));
@@ -50,8 +50,11 @@ public class PolygonToPolygonDtoConverter implements Converter<Polygon, PolygonD
             dto.setDateUpdated(source.getUpdatedAt().format(fmt));
         }
 
-        // Instead of reading source.getRealEstateIds() from JSON for the final list,
-        // we read from the link table for "real" list of IDs:
+        // NEW: pass along ArcGIS IDs
+        dto.setArcgisLayerId(source.getArcgisLayerId());
+        dto.setArcgisPolygonId(source.getArcgisPolygonId());
+
+        // For RealEstate links, read from link table:
         List<String> linkedIds = linkRepository.findByPolygonId(source.getId())
                 .stream()
                 .map(PolygonRealEstate::getRealEstateId)

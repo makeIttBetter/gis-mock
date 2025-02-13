@@ -1,7 +1,7 @@
 package com.example.realestate.controller.openapi;
 
-import com.example.realestate.dto.CoordinateDto;
-import com.example.realestate.dto.PolygonDto;
+import com.example.realestate.dto.model.CoordinateDto;
+import com.example.realestate.dto.model.PolygonDto;
 import com.example.realestate.service.PolygonService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

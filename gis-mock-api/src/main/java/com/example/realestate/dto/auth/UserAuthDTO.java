@@ -1,4 +1,4 @@
-package com.example.realestate.dto;
+package com.example.realestate.dto.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

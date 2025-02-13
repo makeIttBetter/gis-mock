@@ -1,6 +1,6 @@
 package com.example.realestate.service.auth;
 
-import com.example.realestate.dto.UserAuthDTO;
+import com.example.realestate.dto.auth.UserAuthDTO;
 import com.example.realestate.model.User;
 import com.example.realestate.repository.UserRepository;
 import com.example.realestate.util.JwtUtil;

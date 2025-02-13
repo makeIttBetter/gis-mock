@@ -1,6 +1,6 @@
 package com.example.realestate.validator;
 
-import com.example.realestate.dto.UserAuthDTO;
+import com.example.realestate.dto.auth.UserAuthDTO;
 import com.example.realestate.exceptions.UserAlreadyExistsException;
 import com.example.realestate.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

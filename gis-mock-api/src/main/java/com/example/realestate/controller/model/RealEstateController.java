@@ -1,7 +1,7 @@
 package com.example.realestate.controller.model;
 
-import com.example.realestate.dto.PaginatedResponseDto;
-import com.example.realestate.dto.RealEstateDto;
+import com.example.realestate.dto.model.PaginatedResponseDto;
+import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
 import com.example.realestate.service.RealEstateService;
@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/real-estate")
+@RequestMapping("/api/real-estate/attached")
 public class RealEstateController {
 
     private final RealEstateService realEstateService;

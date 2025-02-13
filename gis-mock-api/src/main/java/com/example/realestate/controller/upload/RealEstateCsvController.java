@@ -1,6 +1,6 @@
 package com.example.realestate.controller.upload;
 
-import com.example.realestate.dto.RealEstateCsvUploadResult;
+import com.example.realestate.dto.upload.RealEstateCsvUploadResult;
 import com.example.realestate.service.RealEstateCsvService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

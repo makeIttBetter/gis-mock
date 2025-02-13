@@ -1,7 +1,7 @@
 package com.example.realestate.service;
 
 import com.example.realestate.converters.model.RealEstateToRealEstateDtoConverter;
-import com.example.realestate.dto.RealEstateDto;
+import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
 import com.example.realestate.model.RealEstate;

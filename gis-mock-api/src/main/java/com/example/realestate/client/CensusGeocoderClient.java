@@ -1,6 +1,6 @@
 package com.example.realestate.client;
 
-import com.example.realestate.dto.CensusGeocodeResponse;
+import com.example.realestate.dto.api.CensusGeocodeResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;

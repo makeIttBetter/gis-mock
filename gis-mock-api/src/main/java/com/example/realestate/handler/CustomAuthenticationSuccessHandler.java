@@ -1,6 +1,6 @@
 package com.example.realestate.handler;
 
-import com.example.realestate.dto.UserAuthDTO;
+import com.example.realestate.dto.auth.UserAuthDTO;
 import com.example.realestate.service.auth.OAuth2Service;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

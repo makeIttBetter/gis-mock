@@ -1,4 +1,4 @@
-package com.example.realestate.dto;
+package com.example.realestate.dto.model;
 
 import lombok.Data;
 
@@ -12,4 +12,7 @@ public class PolygonDto {
     private List<String> realEstateObjects;
     private String dateCreated;
     private String dateUpdated;
+
+    private String arcgisLayerId;
+    private String arcgisPolygonId;
 }

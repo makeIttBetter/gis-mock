@@ -1,4 +1,4 @@
-package com.example.realestate.dto;
+package com.example.realestate.dto.model;
 
 import lombok.Data;
 

@@ -1,7 +1,7 @@
 package com.example.realestate.export.service;
 
 import com.example.realestate.annotations.ExportField;
-import com.example.realestate.dto.PolygonDto;
+import com.example.realestate.dto.model.PolygonDto;
 import com.example.realestate.export.cnst.RealEstateCsvConfig;
 import com.example.realestate.model.RealEstate;
 import jakarta.servlet.http.HttpServletResponse;

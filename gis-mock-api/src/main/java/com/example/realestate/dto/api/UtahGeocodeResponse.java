@@ -1,4 +1,4 @@
-package com.example.realestate.dto;
+package com.example.realestate.dto.api;
 
 import lombok.Data;
 

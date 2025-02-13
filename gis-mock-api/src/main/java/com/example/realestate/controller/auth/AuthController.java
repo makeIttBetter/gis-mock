@@ -1,6 +1,6 @@
 package com.example.realestate.controller.auth;
 
-import com.example.realestate.dto.UserAuthDTO;
+import com.example.realestate.dto.auth.UserAuthDTO;
 import com.example.realestate.dto.auth.LoginRequest;
 import com.example.realestate.dto.auth.LoginResponse;
 import com.example.realestate.service.auth.AuthService;

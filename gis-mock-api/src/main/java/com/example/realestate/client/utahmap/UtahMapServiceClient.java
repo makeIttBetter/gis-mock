@@ -1,6 +1,6 @@
 package com.example.realestate.client.utahmap;
 
-import com.example.realestate.dto.UtahGeocodeResponse;
+import com.example.realestate.dto.api.UtahGeocodeResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
