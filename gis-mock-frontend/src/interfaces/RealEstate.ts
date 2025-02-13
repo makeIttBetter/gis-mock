@@ -1,6 +1,6 @@
 // Represents the real estate object returned from the backend
 export interface RealEstate {
-    id: number;
+    id: string;
     mlsNumber: string;
     address: string;
     city: string;

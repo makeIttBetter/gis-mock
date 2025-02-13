@@ -12,6 +12,9 @@ export interface PolygonDTO {
     // List of real estate objects that were inside this polygon
     realEstateObjects: Array<string>; // You could store just IDs or RealEstate[] with details
 
+    arcgisLayerId: string;
+    arcgisPolygonId: string;
+
     // Timestamps for display
     dateCreated: string;
     dateUpdated: string;

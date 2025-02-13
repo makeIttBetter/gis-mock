@@ -2,6 +2,7 @@
 /**
  * src/lib/api.ts
  * Generic API helper functions for REST calls.
+ * MUST be used in every API call to the backend to use standardized headers, authorization and error handling, etc...
  */
 
 import {API_ENDPOINTS} from "@/config";

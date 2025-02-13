@@ -1,3 +1,4 @@
+// file: gis-mock-frontend/src/config/index.ts
 /*
   Developer note: This config defines the list of constants used in the application.
   Adjust the BACKEND_URL as necessary for different environments.

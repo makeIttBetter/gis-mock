@@ -1,7 +1,6 @@
-// File: src/lib/polygonApi.ts
-import {apiDelete, apiGet, apiPost, apiPut} from "@/lib/api";
-import {PolygonDTO} from "@/interfaces/PolygonDTO";
-import {API_ENDPOINTS} from "@/config";
+import { apiDelete, apiGet, apiGetPath, apiPost, apiPut } from "@/lib/api";
+import { PolygonDTO } from "@/interfaces/PolygonDTO";
+import { API_ENDPOINTS } from "@/config";
 
 /**
  * Fetch all saved polygons.
@@ -11,10 +10,10 @@ export async function fetchPolygons(): Promise<PolygonDTO[]> {
 }
 
 /**
- * Fetch a single polygon by its ID.
+ * Fetch a single polygon by its ID (calls GET /api/polygons/{id}).
  */
 export async function fetchPolygonById(id: string): Promise<PolygonDTO> {
-    return apiGet<PolygonDTO>("POLYGONS", {id});
+    return apiGetPath<PolygonDTO>("POLYGONS", id);
 }
 
 /**
@@ -25,11 +24,11 @@ export async function createPolygon(
     coordinates: Array<{ lat: number; lng: number }>,
     realEstateIds: string[]
 ): Promise<PolygonDTO> {
-    return apiPost<PolygonDTO>("POLYGONS", {name, coordinates, realEstateIds});
+    return apiPost<PolygonDTO>("POLYGONS", { name, coordinates, realEstateIds });
 }
 
 /**
- * Update an existing polygon.
+ * Update an existing polygon by ID.
  */
 export async function updatePolygon(
     id: string,
@@ -49,14 +48,6 @@ export async function deletePolygon(id: string): Promise<boolean> {
  * Export the polygon's real estate data as CSV (returns a Blob).
  */
 export async function exportPolygonCsv(polygonId: string): Promise<Blob> {
-    // For CSV, we need a "blob" response.
-    // We'll add a specialized function to api.ts or do fetch with standardized options:
-
-    // Example if you had 'apiGetBlobPath' in api.ts:
-    // return apiGetBlobPath("POLYGONS", `${polygonId}/export/csv`);
-
-    // If not, we can do an inline fetch while still using your 'BACKEND_URL' etc.:
-    // (We replicate the standard config: credentials: 'include')
     const csvUrl = `${API_ENDPOINTS["POLYGONS"]}/${polygonId}/export/csv`;
     const response = await fetch(csvUrl, {
         method: "GET",
@@ -67,4 +58,3 @@ export async function exportPolygonCsv(polygonId: string): Promise<Blob> {
     }
     return await response.blob();
 }
-
