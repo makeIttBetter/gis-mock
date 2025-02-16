@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/real-estate/attached")
+@RequestMapping("/api/real-estate")
 public class RealEstateController {
 
     private final RealEstateService realEstateService;
