@@ -110,4 +110,52 @@ public class ArcgisLayerService {
             throw new RuntimeException("Exception while deleting ArcGIS layer", e);
         }
     }
+
+    /**
+     * NEW: Updates an ArcGIS layer's title (i.e., renames the ArcGIS item).
+     *
+     * @param itemId  ArcGIS item ID to rename.
+     * @param newName The new title for the item.
+     */
+    public void updateLayerName(String itemId, String newName) {
+        log.info("Renaming ArcGIS layer with itemId='{}' to '{}'", itemId, newName);
+
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        // ArcGIS typically uses "title" as the field for item name:
+        formData.add("title", newName);
+
+        try {
+            Map<String, Object> response =
+                    arcgisClient.updateItem(
+                            arcgisUsername,
+                            itemId,
+                            "json",
+                            arcgisApiKey,
+                            formData
+                    );
+
+            boolean success = parseSuccess(response.get("success"));
+            if (success) {
+                log.info("ArcGIS layer itemId={} updated (renamed) successfully", itemId);
+            } else {
+                log.error("Failed to rename ArcGIS layer. Response: {}", response);
+                throw new RuntimeException("Failed to rename ArcGIS layer itemId=" + itemId);
+            }
+        } catch (Exception e) {
+            log.error("Exception while renaming ArcGIS layer", e);
+            throw new RuntimeException("Exception while renaming ArcGIS layer", e);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Helper
+    // ------------------------------------------------------------
+    private boolean parseSuccess(Object successObj) {
+        if (successObj instanceof Boolean) {
+            return (Boolean) successObj;
+        } else if (successObj != null) {
+            return Boolean.parseBoolean(successObj.toString());
+        }
+        return false;
+    }
 }
