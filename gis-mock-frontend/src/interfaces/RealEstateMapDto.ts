@@ -1,6 +1,7 @@
 // src/interfaces/RealEstateMapDto.ts
 export interface RealEstateMapDto {
     id: string;
+    mlsNumber: string;
     latitude: number | null;
     longitude: number | null;
     city: string;

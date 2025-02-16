@@ -375,7 +375,7 @@ export default function RealEstateMap({
                         onCloseClick={() => setSelectedRE(null)}
                     >
                         <div>
-                            <div className="text-xs text-gray-500">ID: {selectedRE.id}</div>
+                            <div className="text-xs text-gray-500">MLS: {selectedRE.mlsNumber}</div>
                             <div className="font-semibold">
                                 {selectedRE.city}, {selectedRE.state}
                             </div>

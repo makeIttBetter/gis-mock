@@ -12,11 +12,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RealEstateMapDto {
-    private String id;
+
+    private String id;          // Internal DB ID (still used for linking)
+    private String mlsNumber;   // <-- New field to hold the MLS#
+
     private Double latitude;
     private Double longitude;
     private String city;
     private String state;
     private String status;
-
 }

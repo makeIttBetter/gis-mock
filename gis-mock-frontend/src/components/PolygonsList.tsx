@@ -3,19 +3,26 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { PolygonDTO } from "@/interfaces/PolygonDTO";
-// Our polygonsApi with standardized calls
 import {
     fetchPolygons,
     deletePolygon,
     exportPolygonCsv,
 } from "@/lib/polygonApi";
+import { RealEstate } from "@/interfaces/RealEstate";
+import { fetchAttachedRealEstate } from "@/lib/realEstateApi";
 
 /**
  * Renders a list of saved polygons, each with an "Expand", "Edit", "Delete", and "Export to CSV" button.
+ * Now, on expand, we fetch the real estate details and show MLS# for each.
  */
 export default function PolygonsList() {
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
     const [expandedPolygonId, setExpandedPolygonId] = useState<string | null>(null);
+
+    // Keep track of each polygon's real estate data (key: polygonId)
+    const [expandedPolygonRealEstates, setExpandedPolygonRealEstates] = useState<{
+        [polygonId: string]: RealEstate[];
+    }>({});
 
     // Track which polygon is currently exporting (for a spinner)
     const [exportLoadingId, setExportLoadingId] = useState<string | null>(null);
@@ -54,19 +61,37 @@ export default function PolygonsList() {
         };
     }, []);
 
-    function handleToggleExpand(polygonId: string) {
-        setExpandedPolygonId((prev) => (prev === polygonId ? null : polygonId));
+    /**
+     * Expands or collapses the polygon details. If expanding, fetch real estate if needed.
+     */
+    async function handleToggleExpand(polygon: PolygonDTO) {
+        if (expandedPolygonId === polygon.id) {
+            // Currently expanded -> collapse
+            setExpandedPolygonId(null);
+            return;
+        }
+        // Expand a new polygon
+        setExpandedPolygonId(polygon.id);
+
+        // If we haven't fetched attached real estate for this polygon yet, do so
+        if (!expandedPolygonRealEstates[polygon.id] && polygon.realEstateObjects.length > 0) {
+            try {
+                const reList = await fetchAttachedRealEstate(polygon.realEstateObjects);
+                setExpandedPolygonRealEstates((prev) => ({
+                    ...prev,
+                    [polygon.id]: reList,
+                }));
+            } catch (error) {
+                console.error("Error fetching attached real estate:", error);
+            }
+        }
     }
 
     /**
      * Deletes the polygon if user confirms.
      */
     async function handleDelete(id: string) {
-        if (
-            window.confirm(
-                "Are you sure you want to delete this polygon and all its relationships?"
-            )
-        ) {
+        if (window.confirm("Are you sure you want to delete this polygon and all its relationships?")) {
             try {
                 await deletePolygon(id);
                 alert("Polygon deleted");
@@ -95,11 +120,10 @@ export default function PolygonsList() {
             const blob = await exportPolygonCsv(polygon.id);
 
             // 2) Create a sanitized name for the downloaded file
-            //    (remove or adjust if you want to allow spaces/symbols)
             const safeName = polygon.name
                 .replace(/[^a-z0-9_\-]+/gi, "_") // replace non-alphanumeric with underscores
-                .replace(/_+/g, "_");          // collapse multiple underscores
-            const filename = safeName || "polygon"; // fallback if name is empty
+                .replace(/_+/g, "_"); // collapse multiple underscores
+            const filename = safeName || "polygon";
 
             // 3) Create a link to download
             const downloadUrl = URL.createObjectURL(blob);
@@ -110,7 +134,6 @@ export default function PolygonsList() {
             link.click();
             link.remove();
             URL.revokeObjectURL(downloadUrl);
-
         } catch (error: any) {
             console.error("Error exporting CSV:", error);
             alert("Failed to export CSV: " + error.message);
@@ -124,6 +147,8 @@ export default function PolygonsList() {
             <h1 className="text-xl font-bold mb-4">Saved Polygons</h1>
             {polygons.map((polygon) => {
                 const isExpanded = expandedPolygonId === polygon.id;
+                const attachedReList = expandedPolygonRealEstates[polygon.id] || [];
+
                 return (
                     <div
                         key={polygon.id}
@@ -139,7 +164,7 @@ export default function PolygonsList() {
                             </div>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => handleToggleExpand(polygon.id)}
+                                    onClick={() => handleToggleExpand(polygon)}
                                     className="px-3 py-1 bg-blue-500 text-white rounded"
                                 >
                                     {isExpanded ? "Collapse" : "Expand"}
@@ -185,7 +210,7 @@ export default function PolygonsList() {
                                                     className="opacity-75"
                                                     fill="currentColor"
                                                     d="M4 12a8 8 0 018-8V0C5.373
-                            0 0 5.373 0 12h4z"
+                          0 0 5.373 0 12h4z"
                                                 />
                                             </svg>
                                             Exporting...
@@ -200,11 +225,18 @@ export default function PolygonsList() {
                         {isExpanded && (
                             <div className="mt-3 ml-4 border-l pl-4">
                                 <h3 className="font-bold mb-2">Real Estate Objects:</h3>
-                                {polygon.realEstateObjects.map((reId) => (
-                                    <div key={reId} className="text-sm">
-                                        • RealEstate ID: {reId}
-                                    </div>
-                                ))}
+                                {/* Instead of showing raw IDs, show MLS# */}
+                                {attachedReList.length === 0 && polygon.realEstateObjects.length > 0 ? (
+                                    <div>Loading attached real estate...</div>
+                                ) : attachedReList.length === 0 ? (
+                                    <div>No attached real estate found.</div>
+                                ) : (
+                                    attachedReList.map((re) => (
+                                        <div key={re.id} className="text-sm">
+                                            • MLS#: {re.mlsNumber} — {re.address}, {re.city}, {re.state}
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         )}
                     </div>

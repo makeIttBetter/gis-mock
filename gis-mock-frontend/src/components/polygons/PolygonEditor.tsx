@@ -370,7 +370,7 @@ export default function PolygonEditor({polygonId}: PolygonEditorProps) {
                             >
                                 <div style={{maxWidth: "200px"}}>
                                     <div className="font-semibold text-sm">
-                                        Real Estate #{selectedMarker.id}
+                                        MLS#: #{selectedMarker.mlsNumber}
                                     </div>
                                     <div className="text-xs">
                                         {selectedMarker.city}, {selectedMarker.state}

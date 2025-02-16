@@ -192,6 +192,7 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
                     Double lng = (re.getLongitude() != null) ? re.getLongitude().doubleValue() : null;
                     return new RealEstateMapDto(
                             re.getId(),
+                            re.getMlsNumber(),
                             lat,
                             lng,
                             re.getCity(),
