@@ -1,43 +1,27 @@
-// File: src/components/RealEstateDashboard.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { RealEstate } from "@/interfaces/RealEstate";
-import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
-import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
+import React, {useEffect, useState} from "react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
 
-// NEW imports for map data & paginated data
-import {
-    fetchAttachedRealEstate,
-    fetchRealEstateMapData,
-    fetchRealEstatePaginated,
-} from "@/lib/realEstateApi";
-import { createPolygon, fetchPolygons, updatePolygon } from "@/lib/polygonApi";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
+import {fetchRealEstateMapData, fetchRealEstatePaginated,} from "@/lib/realEstateApi";
+import {createPolygon, fetchPolygons, updatePolygon} from "@/lib/polygonApi";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
 
-// UI components
 import RealEstateFilterForm from "@/components/RealEstateFilterForm";
 import RealEstateList from "@/components/RealEstateList";
 import RealEstateMap from "@/components/map/RealEstateMap";
 import PolygonsList from "@/components/PolygonsList";
+import {PaginationControls} from "@/components/PaginationControls";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {PaginationDTO} from "@/interfaces/PaginationDTO";
 
-// For pagination controls
-import { PaginationControls } from "@/components/PaginationControls";
-import { PaginationDTO } from "@/interfaces/PaginationDTO";
-
-/**
- * The RealEstateDashboard displays:
- * 1) A filter form
- * 2) A paginated list of full RealEstate records
- * 3) A map with all matching properties (in minimal form), plus polygon logic
- * 4) A list of polygons
- */
 export default function RealEstateDashboard() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // 1) We store the filter fields in local state
+    // (1) State for filters
     const [filters, setFilters] = useState<RealEstateFilterParams>({
         city: "",
         state: "",
@@ -60,33 +44,30 @@ export default function RealEstateDashboard() {
         daysBackMax: undefined,
     });
 
-    // 2) Polygons
+    // (2) Polygons
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
-    const [selectedPolygon, setSelectedPolygon] = useState<PolygonDTO | null>(
-        null
-    );
-    const [editMode, setEditMode] = useState<boolean>(false);
+    const [selectedPolygon, setSelectedPolygon] = useState<PolygonDTO | null>(null);
+    const [editMode, setEditMode] = useState(false);
 
-    // 3) The map’s minimal real-estate data (potentially large set)
+    // (3) Map real-estate data (unified array with all fields)
     const [mapRealEstates, setMapRealEstates] = useState<RealEstateMapDto[]>([]);
-    const [, setMapLoading] = useState<boolean>(false);
+    const [, setMapLoading] = useState(false);
 
-    // 4) The attached real estate (full details) for the selected polygon
-    const [attachedRealEstates, setAttachedRealEstates] = useState<RealEstate[]>(
-        []
-    );
-
-    // 5) The “Properties List” (paginated) with full details
+    // (4) For the “Properties List” (paginated)
     const [listRealEstates, setListRealEstates] = useState<RealEstate[]>([]);
     const [listLoading, setListLoading] = useState<boolean>(false);
-
-    // 6) Pagination states for the “Properties List”
     const [listPage, setListPage] = useState<number>(1);
     const [listPageSize] = useState<number>(100);
     const [listTotalPages, setListTotalPages] = useState<number>(1);
     const [listTotalElements, setListTotalElements] = useState<number>(0);
 
-    // --- parse URL search parameters into filters:
+    // (5) Show/hide attached vs not-attached
+    const [showAttached, setShowAttached] = useState<boolean>(true);
+    const [showNotAttached, setShowNotAttached] = useState<boolean>(true);
+
+    // ------------------------------------------------------------
+    // Read URL search parameters => set initial filters
+    // ------------------------------------------------------------
     useEffect(() => {
         if (!searchParams) return;
         const params = Object.fromEntries(searchParams.entries());
@@ -111,59 +92,64 @@ export default function RealEstateDashboard() {
             basementSqFtMax: params.basementSqFtMax
                 ? Number(params.basementSqFtMax)
                 : undefined,
-            basementFinished: params.basementFinished
-                ? params.basementFinished === "true"
-                : undefined,
+            basementFinished:
+                params.basementFinished !== undefined
+                    ? params.basementFinished === "true"
+                    : undefined,
             daysBackMin: params.daysBackMin ? Number(params.daysBackMin) : undefined,
             daysBackMax: params.daysBackMax ? Number(params.daysBackMax) : undefined,
         });
     }, [searchParams]);
 
-    // --- (A) Load ALL polygon data
+    // ------------------------------------------------------------
+    // Load polygons (used for polygon dropdown + listing)
+    // ------------------------------------------------------------
     async function loadPolygons() {
         try {
-            const data = await fetchPolygons();
-            setPolygons(data);
+            const list = await fetchPolygons();
+            setPolygons(list);
 
-            // If the user had a polygon selected, check if it still exists
+            // If user had a polygon selected, ensure it still exists
             if (selectedPolygon) {
-                const stillExists = data.find((p) => p.id === selectedPolygon.id);
+                const stillExists = list.find((p) => p.id === selectedPolygon.id);
                 if (!stillExists) {
-                    // If the polygon was deleted, clear it from the map
                     setSelectedPolygon(null);
                     setEditMode(false);
                 }
             }
-        } catch (error) {
-            console.error("Error fetching polygons:", error);
+        } catch (err) {
+            console.error("Error loading polygons:", err);
         }
     }
 
     useEffect(() => {
         loadPolygons();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Listen for "polygonDeleted" events from PolygonsList
+    // Listen for polygonDeleted events to reload polygons
     useEffect(() => {
         function handlePolygonDeleted() {
             loadPolygons();
         }
+
         window.addEventListener("polygonDeleted", handlePolygonDeleted);
         return () => {
             window.removeEventListener("polygonDeleted", handlePolygonDeleted);
         };
     }, []);
 
-    // --- (B) Fetch minimal data for the map
+    // ------------------------------------------------------------
+    // Load map data (RealEstateMapDto) for all real-estate matching filters
+    // ------------------------------------------------------------
     useEffect(() => {
         async function loadMapData() {
             setMapLoading(true);
             try {
+                // fetchRealEstateMapData returns every field we need
                 const data = await fetchRealEstateMapData(filters);
-                setMapRealEstates(data);
+                setMapRealEstates(data); // store them in one unified array
             } catch (error) {
-                console.error("Error fetching map real estate data:", error);
+                console.error("Error loading map data:", error);
             } finally {
                 setMapLoading(false);
             }
@@ -172,49 +158,32 @@ export default function RealEstateDashboard() {
         loadMapData();
     }, [filters]);
 
-    // --- (C) Fetch a paginated subset for the “Properties List”
+    // ------------------------------------------------------------
+    // Load the “Properties List” (Paginated RealEstate) for the table
+    // ------------------------------------------------------------
     useEffect(() => {
-        async function loadListData() {
+        async function loadList() {
             setListLoading(true);
             try {
                 const paged = await fetchRealEstatePaginated(filters, listPage, listPageSize);
                 setListRealEstates(paged.content);
                 setListTotalPages(paged.totalPages);
                 setListTotalElements(paged.totalElements);
-            } catch (error) {
-                console.error("Error fetching paginated real estate:", error);
+            } catch (err) {
+                console.error("Error loading paginated real estate:", err);
             } finally {
                 setListLoading(false);
             }
         }
 
-        loadListData();
+        loadList();
     }, [filters, listPage, listPageSize]);
 
-    // --- (D) If a polygon is selected, load its attached real estate
-    useEffect(() => {
-        async function loadAttached() {
-            if (selectedPolygon && selectedPolygon.realEstateObjects.length > 0) {
-                try {
-                    const data = await fetchAttachedRealEstate(
-                        selectedPolygon.realEstateObjects
-                    );
-                    setAttachedRealEstates(data);
-                } catch (error) {
-                    console.error("Error fetching attached real estate:", error);
-                    setAttachedRealEstates([]);
-                }
-            } else {
-                setAttachedRealEstates([]);
-            }
-        }
-
-        loadAttached();
-    }, [selectedPolygon]);
-
-    // --- (E) When filters change, update the URL & re-fetch
-    const handleFilterChange = (newFilters: RealEstateFilterParams) => {
-        const merged = { ...filters, ...newFilters };
+    // ------------------------------------------------------------
+    // Handle filter changes => update the URL
+    // ------------------------------------------------------------
+    function handleFilterChange(newFilters: RealEstateFilterParams) {
+        const merged = {...filters, ...newFilters};
         const queryParams: Record<string, string> = {
             city: merged.city || "",
             state: merged.state || "",
@@ -240,43 +209,17 @@ export default function RealEstateDashboard() {
             daysBackMax: merged.daysBackMax?.toString() || "",
         };
         const query = new URLSearchParams(queryParams).toString();
-        router.replace(`?${query}`, { scroll: false });
-    };
+        router.replace(`?${query}`, {scroll: false});
+    }
 
-    // --- (F) Polygon update callback
-    const handleUpdatePolygon = async (updated: {
-        coordinates: { lat: number; lng: number }[];
-        realEstateIds: string[];
-    }) => {
-        if (selectedPolygon) {
-            try {
-                const updatedPolygon = await updatePolygon(selectedPolygon.id, {
-                    name: selectedPolygon.name,
-                    coordinates: updated.coordinates,
-                    realEstateIds: updated.realEstateIds,
-                });
-                alert("Polygon updated successfully!");
-                setSelectedPolygon(updatedPolygon);
-
-                // Reload the full polygon list
-                const updatedPolygons = await fetchPolygons();
-                setPolygons(updatedPolygons);
-
-                window.dispatchEvent(new Event("polygonCreated")); // to refresh in PolygonsList
-                setEditMode(false);
-            } catch (error) {
-                console.error("Error updating polygon:", error);
-                alert("Failed to update polygon.");
-            }
-        }
-    };
-
-    // --- (G) Polygon create callback
-    const handleCreatePolygon = async (newPolygon: {
+    // ------------------------------------------------------------
+    // Polygon create + update callbacks
+    // ------------------------------------------------------------
+    async function handleCreatePolygon(newPolygon: {
         name: string;
         coordinates: { lat: number; lng: number }[];
         realEstateIds: string[];
-    }) => {
+    }) {
         try {
             const created = await createPolygon(
                 newPolygon.name,
@@ -284,52 +227,64 @@ export default function RealEstateDashboard() {
                 newPolygon.realEstateIds
             );
             alert("New polygon created successfully!");
-
-            const updatedPolygons = await fetchPolygons();
-            setPolygons(updatedPolygons);
+            await loadPolygons(); // refresh polygons list
             setSelectedPolygon(created);
-
             window.dispatchEvent(new Event("polygonCreated"));
-        } catch (error) {
-            console.error("Error creating polygon:", error);
+        } catch (err) {
+            console.error("Error creating polygon:", err);
             alert("Failed to create polygon.");
         }
-    };
-
-    // --- (H) Show/hide attached vs not-attached markers
-    const [showAttached, setShowAttached] = useState(true);
-    const [showNotAttached, setShowNotAttached] = useState(true);
-
-    // Convert full RealEstate to minimal map shape
-    function convertFullToMapDto(item: RealEstate): RealEstateMapDto {
-        return {
-            id: String(item.id),
-            latitude: item.latitude ? parseFloat(item.latitude) : null,
-            longitude: item.longitude ? parseFloat(item.longitude) : null,
-            city: item.city,
-            state: item.state,
-            status: item.status,
-        };
     }
 
-    const attachedMapData: RealEstateMapDto[] = attachedRealEstates.map(
-        convertFullToMapDto
-    );
+    async function handleUpdatePolygon(updated: {
+        coordinates: { lat: number; lng: number }[];
+        realEstateIds: string[];
+    }) {
+        if (!selectedPolygon) return;
+        try {
+            const result = await updatePolygon(selectedPolygon.id, {
+                name: selectedPolygon.name,
+                coordinates: updated.coordinates,
+                realEstateIds: updated.realEstateIds,
+            });
+            alert("Polygon updated successfully!");
+            setSelectedPolygon(result);
+            await loadPolygons();
+            window.dispatchEvent(new Event("polygonCreated"));
+            setEditMode(false);
+        } catch (error) {
+            console.error("Error updating polygon:", error);
+            alert("Failed to update polygon.");
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Build final array for the map (attached + not attached)
+    // ------------------------------------------------------------
     const attachedIdsSet = new Set(selectedPolygon?.realEstateObjects || []);
-    const notAttachedMapData: RealEstateMapDto[] = mapRealEstates.filter(
-        (re) => !attachedIdsSet.has(re.id)
-    );
 
-    let finalRealEstates: RealEstateMapDto[] = [];
+    // We'll filter from the single array `mapRealEstates`:
+    let finalMapData: RealEstateMapDto[] = [];
+
     if (selectedPolygon) {
-        if (showAttached) finalRealEstates = finalRealEstates.concat(attachedMapData);
-        if (showNotAttached) finalRealEstates = finalRealEstates.concat(notAttachedMapData);
+        // If a polygon is selected, we want to show either attached or not attached or both
+        const attachedArray = mapRealEstates.filter((re) =>
+            attachedIdsSet.has(re.id)
+        );
+        const notAttachedArray = mapRealEstates.filter(
+            (re) => !attachedIdsSet.has(re.id)
+        );
+
+        if (showAttached) finalMapData = finalMapData.concat(attachedArray);
+        if (showNotAttached) finalMapData = finalMapData.concat(notAttachedArray);
     } else {
-        // No polygon selected -> show all markers
-        finalRealEstates = mapRealEstates;
+        // If no polygon is selected, we just show everything
+        finalMapData = mapRealEstates;
     }
 
-    // Pagination object for the “Properties List”
+    // ------------------------------------------------------------
+    // Prepare pagination object
+    // ------------------------------------------------------------
     const paginationObj: PaginationDTO = {
         page: listPage,
         page_size: listPageSize,
@@ -341,11 +296,11 @@ export default function RealEstateDashboard() {
         <div className="p-4 min-h-screen bg-gray-100">
             <h1 className="text-2xl font-bold mb-4">Real Estate Dashboard</h1>
 
-            {/* Filter Form */}
-            <RealEstateFilterForm filters={filters} onChange={handleFilterChange} />
+            {/* Filter form */}
+            <RealEstateFilterForm filters={filters} onChange={handleFilterChange}/>
 
             <div className="flex flex-col lg:flex-row mt-4 gap-4">
-                {/* Left side: Paginated List */}
+                {/* LEFT: Paginated RealEstate list */}
                 <div className="flex-1">
                     <h2 className="text-xl font-semibold mb-2">
                         Properties List (showing {listRealEstates.length} of {listTotalElements})
@@ -353,30 +308,27 @@ export default function RealEstateDashboard() {
                     {listLoading ? (
                         <div>Loading properties...</div>
                     ) : (
-                        <RealEstateList realEstates={listRealEstates} />
+                        <RealEstateList realEstates={listRealEstates}/>
                     )}
 
-                    {/* Pagination Controls */}
                     <PaginationControls
                         pagination={paginationObj}
                         onPageChange={(newPage) => setListPage(newPage)}
                     />
                 </div>
 
-                {/* Right side: Map + Polygons List */}
+                {/* RIGHT: Map + Polygons */}
                 <div className="flex-1 flex flex-col gap-4">
-                    {/* Map Section */}
-                    <div className="border p-2" style={{ minWidth: "300px" }}>
+                    <div className="border p-2" style={{minWidth: "300px"}}>
                         <h2 className="text-xl font-semibold mb-2">Map View</h2>
 
-                        {/* Polygon Selection Controls */}
+                        {/* Polygon dropdown */}
                         <div className="mb-2 flex items-center gap-2">
                             <label className="text-sm font-medium">Select Polygon:</label>
                             <select
                                 value={selectedPolygon ? selectedPolygon.id : ""}
                                 onChange={(e) => {
-                                    const poly =
-                                        polygons.find((p) => p.id === e.target.value) || null;
+                                    const poly = polygons.find((p) => p.id === e.target.value) || null;
                                     setSelectedPolygon(poly);
                                     setEditMode(false);
                                 }}
@@ -420,7 +372,7 @@ export default function RealEstateDashboard() {
                             )}
                         </div>
 
-                        {/* Checkboxes to show/hide "attached" vs "not-attached" markers */}
+                        {/* Show/hide checkboxes (attached vs not-attached) */}
                         {selectedPolygon && (
                             <div className="mb-2 flex gap-4">
                                 <label className="flex items-center">
@@ -452,28 +404,24 @@ export default function RealEstateDashboard() {
                                 "-" +
                                 String(showNotAttached)
                             }
-                            realEstates={finalRealEstates}
-                            attachedIds={
-                                selectedPolygon ? selectedPolygon.realEstateObjects : undefined
-                            }
-                            center={{ lat: 40.114955, lng: -111.654923 }}
+                            realEstates={finalMapData} // full array (both attached + not attached)
+                            attachedIds={selectedPolygon?.realEstateObjects}
+                            center={{lat: 40.114955, lng: -111.654923}}
                             zoom={11}
-                            containerStyle={{ width: "100%", height: "400px" }}
+                            containerStyle={{width: "100%", height: "400px"}}
                             displayPolygon={
                                 selectedPolygon && !editMode ? selectedPolygon : undefined
                             }
-                            editablePolygon={
-                                selectedPolygon && editMode ? selectedPolygon : undefined
-                            }
+                            editablePolygon={selectedPolygon && editMode ? selectedPolygon : undefined}
                             onUpdatePolygon={handleUpdatePolygon}
                             onCreatePolygon={handleCreatePolygon}
                         />
                     </div>
 
-                    {/* Polygons List Section */}
+                    {/* Polygons list */}
                     <div className="border p-2">
                         <h2 className="text-xl font-semibold mb-2">Saved Polygons</h2>
-                        <PolygonsList />
+                        <PolygonsList/>
                     </div>
                 </div>
             </div>

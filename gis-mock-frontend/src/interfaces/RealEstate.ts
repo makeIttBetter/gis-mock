@@ -1,7 +1,9 @@
-// Represents the real estate object returned from the backend
+// File: src/interfaces/RealEstate.ts
+
 export interface RealEstate {
     id: string;
     mlsNumber: string;
+    taxId?: string;
     address: string;
     city: string;
     state: string;
@@ -10,4 +12,8 @@ export interface RealEstate {
     listPrice: string;
     latitude: string;
     longitude: string;
+
+    // OPTIONAL Fields we now support editing from the map pop-up:
+    soldTerms?: string;
+    soldPrice?: string;
 }

@@ -1,9 +1,11 @@
 package com.example.realestate.service;
 
+import com.example.realestate.converters.model.RealEstatePartialUpdateConverter;
 import com.example.realestate.converters.model.RealEstateToRealEstateDtoConverter;
-import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
+import com.example.realestate.dto.model.RealEstateDto;
+import com.example.realestate.dto.model.RealEstateUpdateDto;
 import com.example.realestate.model.RealEstate;
 import com.example.realestate.repository.RealEstateRepository;
 import com.example.realestate.specification.RealEstateSpecification;
@@ -24,15 +26,19 @@ import java.util.stream.Collectors;
 @Service
 public class RealEstateService implements CrudService<RealEstateDto, String> {
 
+
     private final RealEstateRepository realEstateRepository;
     private final RealEstateToRealEstateDtoConverter realEstateConverter;
+    private final RealEstatePartialUpdateConverter realEstatePartialUpdateConverter; // << NEW
 
     public RealEstateService(
             RealEstateRepository realEstateRepository,
-            RealEstateToRealEstateDtoConverter realEstateConverter
+            RealEstateToRealEstateDtoConverter realEstateConverter,
+            RealEstatePartialUpdateConverter realEstatePartialUpdateConverter
     ) {
         this.realEstateRepository = realEstateRepository;
         this.realEstateConverter = realEstateConverter;
+        this.realEstatePartialUpdateConverter = realEstatePartialUpdateConverter;
     }
 
     @Override
@@ -64,6 +70,30 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
         // (Placeholder - not relevant for this sample)
         throw new UnsupportedOperationException("Not implemented");
     }
+
+    /**
+     * NEW: Implement partial update using RealEstateUpdateDto.
+     */
+    public RealEstateDto update(String id, RealEstateUpdateDto updateDto) {
+        log.info("RealEstateService.update id={}, updateDto={}", id, updateDto);
+
+        // 1) Find existing record
+        RealEstate existing = realEstateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No RealEstate found with ID " + id));
+
+        // 2) Partially update fields
+        realEstatePartialUpdateConverter.updateEntity(existing, updateDto);
+
+        // 3) Rebuild full address if the user changed any address/city/state/zip
+        existing.setFullAddress(buildFullAddress(existing));
+
+        // 4) Save
+        RealEstate saved = realEstateRepository.save(existing);
+
+        // 5) Convert to RealEstateDto
+        return realEstateConverter.convert(saved);
+    }
+
 
     public List<RealEstateDto> getRealEstateByIds(List<String> ids) {
         log.info("Fetching real estate records for IDs: {}", ids);
@@ -160,21 +190,15 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
     }
 
     /**
-     * 2) New method: returns ALL real estate that match the filters,
-     * but only minimal columns (RealEstateMapDto) for the map.
-     *
-     * @param filterDto filter conditions
-     * @return a List of RealEstateMapDto (could be up to 100k!)
+     * Return ALL matching RealEstate as minimal map data (RealEstateMapDto).
+     * Updated to include soldTerms, soldPrice, taxId, address, zip.
      */
     public List<RealEstateMapDto> getFilteredRealEstateMapData(RealEstateFilterDto filterDto) {
         log.info("Filtering real estate for map with filters: {}", filterDto);
-        // Do the same approach as before, but only map minimal fields.
-
-        // Step 1: Get all that match (excluding price filtering in DB).
         var spec = RealEstateSpecification.withFilters(filterDto);
         List<RealEstate> entities = realEstateRepository.findAll(spec);
 
-        // Step 2: Price filter in memory
+        // Price filter in memory:
         entities = entities.stream()
                 .filter(re -> {
                     double price = parsePriceSafe(re.getListPrice());
@@ -184,26 +208,39 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
                 })
                 .toList();
 
-        // Step 3: Convert to minimal RealEstateMapDto
+        // Convert to RealEstateMapDto
         List<RealEstateMapDto> result = entities.stream()
-                .map(re -> {
-                    // Convert BigDecimals to Double
-                    Double lat = (re.getLatitude() != null) ? re.getLatitude().doubleValue() : null;
-                    Double lng = (re.getLongitude() != null) ? re.getLongitude().doubleValue() : null;
-                    return new RealEstateMapDto(
-                            re.getId(),
-                            re.getMlsNumber(),
-                            lat,
-                            lng,
-                            re.getCity(),
-                            re.getState(),
-                            re.getStatus()
-                    );
-                })
+                .map(this::toMapDto)
                 .collect(Collectors.toList());
 
         log.info("Found {} real estate records (map data).", result.size());
         return result;
+    }
+
+    /**
+     * Helper method to build a full address from parts.
+     */
+    private String buildFullAddress(RealEstate e) {
+        // We simply combine these fields with commas (adjust to your preference)
+        StringBuilder sb = new StringBuilder();
+
+        if (e.getAddress() != null && !e.getAddress().isBlank()) {
+            sb.append(e.getAddress());
+        }
+        if (e.getCity() != null && !e.getCity().isBlank()) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append(e.getCity());
+        }
+        if (e.getState() != null && !e.getState().isBlank()) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append(e.getState());
+        }
+        if (e.getZip() != null && !e.getZip().isBlank()) {
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append(e.getZip());
+        }
+
+        return sb.toString();
     }
 
     /**
@@ -216,5 +253,36 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
         } catch (ParseException e) {
             return 0.0; // or handle differently
         }
+    }
+
+    /**
+     * Convert a RealEstate entity to RealEstateMapDto with minimal fields
+     * plus the extra ones we need for pop-up editing.
+     */
+    private RealEstateMapDto toMapDto(RealEstate re) {
+        RealEstateMapDto dto = new RealEstateMapDto();
+        dto.setId(re.getId());
+        dto.setMlsNumber(re.getMlsNumber());
+        dto.setSoldTerms(re.getSoldTerms());
+        dto.setSoldPrice(re.getSoldPrice());
+        dto.setTaxId(re.getTaxId());
+        dto.setAddress(re.getAddress());
+        dto.setCity(re.getCity());
+        dto.setState(re.getState());
+        dto.setZip(re.getZip());
+        dto.setStatus(re.getStatus());
+
+        // Convert BigDecimals to Double for lat/long
+        if (re.getLatitude() != null) {
+            dto.setLatitude(re.getLatitude().doubleValue());
+        } else {
+            dto.setLatitude(null);
+        }
+        if (re.getLongitude() != null) {
+            dto.setLongitude(re.getLongitude().doubleValue());
+        } else {
+            dto.setLongitude(null);
+        }
+        return dto;
     }
 }

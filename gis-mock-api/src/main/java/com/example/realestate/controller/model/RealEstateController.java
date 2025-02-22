@@ -4,20 +4,18 @@ import com.example.realestate.dto.model.PaginatedResponseDto;
 import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
+import com.example.realestate.dto.model.RealEstateUpdateDto; // << NEW
 import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * REST Controller that exposes endpoints to retrieve real estate data.
+ * REST Controller that exposes endpoints to retrieve or update real estate data.
  */
 @Slf4j
 @RestController
@@ -31,8 +29,7 @@ public class RealEstateController {
     }
 
     /**
-     * Existing endpoint that returns ALL matching RealEstateDto (full details),
-     * without pagination. (Kept for backward-compatibility.)
+     * Existing endpoint that returns ALL matching RealEstateDto (full details).
      */
     @GetMapping
     public List<RealEstateDto> getRealEstate(RealEstateFilterDto filterDto) {
@@ -41,10 +38,7 @@ public class RealEstateController {
     }
 
     /**
-     * NEW: Returns ALL matching real estate for the map,
-     * but only minimal columns (RealEstateMapDto).
-     * Example usage:
-     * GET /api/real-estate/map?city=Provo&minPrice=200000
+     * NEW: Returns minimal real estate data for map usage.
      */
     @GetMapping("/map")
     public ResponseEntity<List<RealEstateMapDto>> getRealEstateMapData(RealEstateFilterDto filterDto) {
@@ -54,10 +48,7 @@ public class RealEstateController {
     }
 
     /**
-     * NEW: Returns a paginated list of RealEstateDto (full details),
-     * but only the requested page (e.g., 100 items).
-     * Example usage:
-     * GET /api/real-estate/paginated?page=1&pageSize=100&city=Provo
+     * NEW: Returns a paginated list of RealEstateDto (full details).
      */
     @GetMapping("/paginated")
     public ResponseEntity<PaginatedResponseDto<RealEstateDto>> getRealEstatePaginated(
@@ -66,10 +57,7 @@ public class RealEstateController {
             @RequestParam(defaultValue = "50", name = "pageSize") int pageSize
     ) {
         log.info("GET /api/real-estate/paginated - page={}, pageSize={}, filter={}", page, pageSize, filterDto);
-
-        // Use the new service method
-        Page<RealEstateDto> pageResult =
-                realEstateService.getFilteredRealEstatePaginated(filterDto, page, pageSize);
+        Page<RealEstateDto> pageResult = realEstateService.getFilteredRealEstatePaginated(filterDto, page, pageSize);
 
         PaginatedResponseDto<RealEstateDto> response = new PaginatedResponseDto<>(
                 pageResult.getContent(),
@@ -82,12 +70,27 @@ public class RealEstateController {
         return ResponseEntity.ok(response);
     }
 
-    // The attached endpoint for reference (unchanged)
+    /**
+     * The attached endpoint for reference (unchanged).
+     */
     @GetMapping("/attached")
     public ResponseEntity<List<RealEstateDto>> getAttachedRealEstate(@RequestParam("ids") String ids) {
         log.info("GET /api/real-estate/attached with ids: {}", ids);
         List<String> idList = Arrays.asList(ids.split(","));
         List<RealEstateDto> attachedRecords = realEstateService.getRealEstateByIds(idList);
         return ResponseEntity.ok(attachedRecords);
+    }
+
+    // ----------------------------------------------------------------
+    // NEW: Update the RealEstate with the given ID using RealEstateUpdateDto
+    // ----------------------------------------------------------------
+    @PutMapping("/{id}")
+    public ResponseEntity<RealEstateDto> updateRealEstate(
+            @PathVariable("id") String id,
+            @RequestBody RealEstateUpdateDto updateDto
+    ) {
+        log.info("PUT /api/real-estate/{} -> {}", id, updateDto);
+        RealEstateDto updated = realEstateService.update(id, updateDto);
+        return ResponseEntity.ok(updated);
     }
 }

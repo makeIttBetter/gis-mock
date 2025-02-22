@@ -1,11 +1,12 @@
 // File: src/lib/realEstateApi.ts
 "use client";
 
-import { apiGet } from "@/lib/api";
-import { RealEstate } from "@/interfaces/RealEstate";
-import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
-import { PaginatedResponse } from "@/interfaces/PaginatedResponse";
-import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
+import {apiGet} from "@/lib/api";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
+import {PaginatedResponse} from "@/interfaces/PaginatedResponse";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
+import {RealEstateUpdatePayload} from "@/interfaces/RealEstateUpdatePayload";
 
 /**
  * Fetch all real estate (full fields) that match the filters.
@@ -22,7 +23,7 @@ export async function fetchRealEstateData(
 export async function fetchAttachedRealEstate(
     ids: string[]
 ): Promise<RealEstate[]> {
-    return apiGet<RealEstate[]>("REAL_ESTATE_ATTACHED", { ids: ids.join(",") });
+    return apiGet<RealEstate[]>("REAL_ESTATE_ATTACHED", {ids: ids.join(",")});
 }
 
 /**
@@ -33,7 +34,7 @@ export async function fetchRealEstatePaginated(
     page: number,
     pageSize: number
 ): Promise<PaginatedResponse<RealEstate>> {
-    const params: Record<string, any> = { ...filters, page, pageSize };
+    const params: Record<string, any> = {...filters, page, pageSize};
     return apiGet<PaginatedResponse<RealEstate>>("REAL_ESTATE_PAGINATED", params);
 }
 
@@ -44,4 +45,25 @@ export async function fetchRealEstateMapData(
     filters: RealEstateFilterParams
 ): Promise<RealEstateMapDto[]> {
     return apiGet<RealEstateMapDto[]>("REAL_ESTATE_MAP", filters);
+}
+
+/**
+ * PartialUpdate a RealEstate by ID.
+ */
+export async function updateRealEstate(
+    id: string,
+    payload: RealEstateUpdatePayload
+): Promise<RealEstate> {
+    const baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/real-estate/${id}`;
+    const res = await fetch(baseUrl, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update RealEstate ID: ${id}`);
+    }
+    return res.json();
 }

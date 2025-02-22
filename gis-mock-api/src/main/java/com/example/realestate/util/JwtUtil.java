@@ -57,6 +57,21 @@ public class JwtUtil {
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
+    /**
+     * Check if the token is valid by ensuring it's not expired
+     * and can be parsed with our secret key.
+     * (This version doesn't require userDetails for the check.)
+     */
+    public boolean validateToken(String token) {
+        try {
+            // If it throws an exception, it's invalid.
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            log.error("JWT validation failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
     // ----------------------------------------------
     // Helper methods
     // ----------------------------------------------

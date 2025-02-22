@@ -197,9 +197,9 @@ export async function apiPostFormData<T>(
     const res = await fetch(url, {
             method: "POST",
             // Do NOT set "Content-Type", the browser sets it automatically when sending FormData.
-            headers: {
-                "Content-Type": "application/json",
-            },
+            // headers: {
+            //     "Content-Type": "application/json",
+            // },
             credentials: "include",
             body:
             formData,

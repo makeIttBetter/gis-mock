@@ -7,6 +7,8 @@ import com.example.realestate.exceptions.UserNotFoundException;
 import com.example.realestate.model.User;
 import com.example.realestate.repository.UserRepository;
 import com.example.realestate.util.JwtUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,10 +19,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-/**
- * Handles sign-up, sign-in, verifying, and guest token logic
- * (mirroring the example you provided).
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -42,7 +40,6 @@ public class AuthService {
         User newUser = new User();
         newUser.setUsername(username);
         newUser.setUsername(email);
-        // encode the password
         newUser.setPassword(passwordEncoder.encode(rawPassword));
         newUser.setProvider("none");
 
@@ -71,8 +68,8 @@ public class AuthService {
             String token = jwtUtil.generateToken(
                     org.springframework.security.core.userdetails.User
                             .withUsername(user.getUsername())
-                            .password(user.getPassword()) // though not used after
-                            .authorities("ROLE_USER")      // or your actual roles
+                            .password(user.getPassword())
+                            .authorities("ROLE_USER")
                             .build()
             );
 
@@ -90,5 +87,55 @@ public class AuthService {
         }
     }
 
+    /**
+     * Reads the jwtToken from the HttpOnly cookie and checks validity.
+     * Also ensures the user from the token still exists in DB.
+     */
+    public boolean verifyTokenFromRequest(HttpServletRequest request) {
+        String token = extractTokenFromCookies(request);
+        if (token == null) {
+            log.warn("No JWT token found in cookies.");
+            return false;
+        }
 
+        // First check if the token is valid (not expired, etc.).
+        boolean basicValid = jwtUtil.validateToken(token);
+        if (!basicValid) {
+            log.warn("JWT token is invalid or expired.");
+            return false;
+        }
+
+        // Next: extract the username from the token and check if user exists
+        String username;
+        try {
+            username = jwtUtil.extractUsername(token);
+        } catch (Exception e) {
+            log.error("Failed to extract username from token: {}", e.getMessage());
+            return false;
+        }
+        if (username == null) {
+            log.warn("Token does not contain a valid username");
+            return false;
+        }
+
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            log.warn("No user found in DB for username: {}", username);
+            return false;
+        }
+
+        return true; // Passed all checks
+    }
+
+    private String extractTokenFromCookies(HttpServletRequest request) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+        for (Cookie cookie : request.getCookies()) {
+            if ("jwtToken".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
 }
