@@ -16,4 +16,7 @@ export const API_ENDPOINTS = {
     REAL_ESTATE_PAGINATED: `${BACKEND_URL}/api/real-estate/paginated`,
     REAL_ESTATE_MAP: `${BACKEND_URL}/api/real-estate/map`,
     AUTH_VERIFY: `${BACKEND_URL}/api/auth/verify`,
+
+    PROFILE: `${BACKEND_URL}/api/profile`,
+
 };
