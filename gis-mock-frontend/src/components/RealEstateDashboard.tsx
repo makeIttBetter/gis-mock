@@ -17,101 +17,113 @@ import {PaginationControls} from "@/components/PaginationControls";
 import {RealEstate} from "@/interfaces/RealEstate";
 import {PaginationDTO} from "@/interfaces/PaginationDTO";
 
+/**
+ * The main dashboard that:
+ * 1) Shows a filter form,
+ * 2) Lists properties (with pagination),
+ * 3) Displays a map with optional polygon editing,
+ * 4) And a polygons list.
+ */
 export default function RealEstateDashboard() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // (1) State for filters
-    const [filters, setFilters] = useState<RealEstateFilterParams>({
-        city: "",
-        state: "",
-        status: "",
-        minPrice: "",
-        maxPrice: "",
-        ids: "",
-        address: "",
-        zipcode: "",
-        propertyTypes: [],
-        styles: [],
-        yearBuiltMin: undefined,
-        yearBuiltMax: undefined,
-        glaMin: undefined,
-        glaMax: undefined,
-        basementSqFtMin: undefined,
-        basementSqFtMax: undefined,
-        basementFinished: undefined,
-        daysBackMin: undefined,
-        daysBackMax: undefined,
-    });
+    // 1) Filter state from the URL
+    const [filters, setFilters] = useState<RealEstateFilterParams>({});
+    const [didLoadFilters, setDidLoadFilters] = useState(false);
 
-    // (2) Polygons
+    // 2) Polygons
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
     const [selectedPolygon, setSelectedPolygon] = useState<PolygonDTO | null>(null);
     const [editMode, setEditMode] = useState(false);
 
-    // (3) Map real-estate data (unified array with all fields)
-    const [mapRealEstates, setMapRealEstates] = useState<RealEstateMapDto[]>([]);
+    // 3) Real estate map data
+    //    The backend returns { filtered: [...], attached: [...] }
+    const [mapRealEstates, setMapRealEstates] = useState<{
+        filtered: RealEstateMapDto[];
+        attached: RealEstateMapDto[];
+    }>({filtered: [], attached: []});
     const [, setMapLoading] = useState(false);
 
-    // (4) For the “Properties List” (paginated)
+    // 4) Paginated list data
     const [listRealEstates, setListRealEstates] = useState<RealEstate[]>([]);
-    const [listLoading, setListLoading] = useState<boolean>(false);
+    const [listLoading, setListLoading] = useState(false);
     const [listPage, setListPage] = useState<number>(1);
     const [listPageSize] = useState<number>(100);
     const [listTotalPages, setListTotalPages] = useState<number>(1);
     const [listTotalElements, setListTotalElements] = useState<number>(0);
 
-    // (5) Show/hide attached vs not-attached
-    const [showAttached, setShowAttached] = useState<boolean>(true);
-    const [showNotAttached, setShowNotAttached] = useState<boolean>(true);
+    // 5) Toggles for showing attached / not-attached
+    const [showAttached, setShowAttached] = useState(true);
+    const [showNotAttached, setShowNotAttached] = useState(true);
 
-    // ------------------------------------------------------------
-    // Read URL search parameters => set initial filters
-    // ------------------------------------------------------------
+    /* ----------------------------------------------------------
+     *  1) Parse URL search parameters => set "filters"
+     * ---------------------------------------------------------- */
     useEffect(() => {
         if (!searchParams) return;
-        const params = Object.fromEntries(searchParams.entries());
-        setFilters({
-            city: params.city || "",
-            state: params.state || "",
-            status: params.status || "",
-            minPrice: params.minPrice || "",
-            maxPrice: params.maxPrice || "",
-            ids: params.ids || "",
-            address: params.address || "",
-            zipcode: params.zipcode || "",
-            propertyTypes: params.propertyTypes ? params.propertyTypes.split(",") : [],
-            styles: params.styles ? params.styles.split(",") : [],
-            yearBuiltMin: params.yearBuiltMin ? Number(params.yearBuiltMin) : undefined,
-            yearBuiltMax: params.yearBuiltMax ? Number(params.yearBuiltMax) : undefined,
-            glaMin: params.glaMin ? Number(params.glaMin) : undefined,
-            glaMax: params.glaMax ? Number(params.glaMax) : undefined,
-            basementSqFtMin: params.basementSqFtMin
-                ? Number(params.basementSqFtMin)
+
+        const paramsObj: Record<string, string> = Object.fromEntries(
+            searchParams.entries()
+        );
+
+        function parseBoolOrUndef(val?: string) {
+            if (val === "true") return true;
+            if (val === "false") return false;
+            return undefined;
+        }
+
+        const newFilters: RealEstateFilterParams = {
+            city: paramsObj.city || "",
+            state: paramsObj.state || "",
+            status: paramsObj.status || "",
+            minPrice: paramsObj.minPrice || "",
+            maxPrice: paramsObj.maxPrice || "",
+            ids: paramsObj.ids || "",
+            address: paramsObj.address || "",
+            zipcode: paramsObj.zipcode || "",
+            propertyTypes: paramsObj.propertyTypes
+                ? paramsObj.propertyTypes.split(",")
+                : [],
+            styles: paramsObj.styles ? paramsObj.styles.split(",") : [],
+            yearBuiltMin: paramsObj.yearBuiltMin
+                ? Number(paramsObj.yearBuiltMin)
                 : undefined,
-            basementSqFtMax: params.basementSqFtMax
-                ? Number(params.basementSqFtMax)
+            yearBuiltMax: paramsObj.yearBuiltMax
+                ? Number(paramsObj.yearBuiltMax)
                 : undefined,
-            basementFinished:
-                params.basementFinished !== undefined
-                    ? params.basementFinished === "true"
-                    : undefined,
-            daysBackMin: params.daysBackMin ? Number(params.daysBackMin) : undefined,
-            daysBackMax: params.daysBackMax ? Number(params.daysBackMax) : undefined,
-        });
+            glaMin: paramsObj.glaMin ? Number(paramsObj.glaMin) : undefined,
+            glaMax: paramsObj.glaMax ? Number(paramsObj.glaMax) : undefined,
+            basementSqFtMin: paramsObj.basementSqFtMin
+                ? Number(paramsObj.basementSqFtMin)
+                : undefined,
+            basementSqFtMax: paramsObj.basementSqFtMax
+                ? Number(paramsObj.basementSqFtMax)
+                : undefined,
+            basementFinished: parseBoolOrUndef(paramsObj.basementFinished),
+            daysBackMin: paramsObj.daysBackMin
+                ? Number(paramsObj.daysBackMin)
+                : undefined,
+            daysBackMax: paramsObj.daysBackMax
+                ? Number(paramsObj.daysBackMax)
+                : undefined,
+        };
+
+        setFilters(newFilters);
+        setDidLoadFilters(true);
     }, [searchParams]);
 
-    // ------------------------------------------------------------
-    // Load polygons (used for polygon dropdown + listing)
-    // ------------------------------------------------------------
+    /* ----------------------------------------------------------
+     *  2) Load polygons once
+     * ---------------------------------------------------------- */
     async function loadPolygons() {
         try {
-            const list = await fetchPolygons();
-            setPolygons(list);
+            const data = await fetchPolygons();
+            setPolygons(data);
 
-            // If user had a polygon selected, ensure it still exists
+            // If we have a polygon selected, ensure it still exists
             if (selectedPolygon) {
-                const stillExists = list.find((p) => p.id === selectedPolygon.id);
+                const stillExists = data.find((p) => p.id === selectedPolygon.id);
                 if (!stillExists) {
                     setSelectedPolygon(null);
                     setEditMode(false);
@@ -126,28 +138,36 @@ export default function RealEstateDashboard() {
         loadPolygons();
     }, []);
 
-    // Listen for polygonDeleted events to reload polygons
+    // Listen for polygon changes from PolygonsList
     useEffect(() => {
         function handlePolygonDeleted() {
             loadPolygons();
         }
 
+        function handlePolygonCreated() {
+            loadPolygons();
+        }
+
         window.addEventListener("polygonDeleted", handlePolygonDeleted);
+        window.addEventListener("polygonCreated", handlePolygonCreated);
         return () => {
             window.removeEventListener("polygonDeleted", handlePolygonDeleted);
+            window.removeEventListener("polygonCreated", handlePolygonCreated);
         };
     }, []);
 
-    // ------------------------------------------------------------
-    // Load map data (RealEstateMapDto) for all real-estate matching filters
-    // ------------------------------------------------------------
+    /* ----------------------------------------------------------
+     *  3) Load map data (filtered + attached if polygon selected)
+     * ---------------------------------------------------------- */
     useEffect(() => {
+        if (!didLoadFilters) return;
+
         async function loadMapData() {
             setMapLoading(true);
             try {
-                // fetchRealEstateMapData returns every field we need
-                const data = await fetchRealEstateMapData(filters);
-                setMapRealEstates(data); // store them in one unified array
+                const polygonId = selectedPolygon ? selectedPolygon.id : undefined;
+                const data = await fetchRealEstateMapData(filters, polygonId);
+                setMapRealEstates(data);
             } catch (error) {
                 console.error("Error loading map data:", error);
             } finally {
@@ -156,12 +176,14 @@ export default function RealEstateDashboard() {
         }
 
         loadMapData();
-    }, [filters]);
+    }, [filters, selectedPolygon, didLoadFilters]);
 
-    // ------------------------------------------------------------
-    // Load the “Properties List” (Paginated RealEstate) for the table
-    // ------------------------------------------------------------
+    /* ----------------------------------------------------------
+     *  4) Load paginated list
+     * ---------------------------------------------------------- */
     useEffect(() => {
+        if (!didLoadFilters) return;
+
         async function loadList() {
             setListLoading(true);
             try {
@@ -177,44 +199,66 @@ export default function RealEstateDashboard() {
         }
 
         loadList();
-    }, [filters, listPage, listPageSize]);
+    }, [filters, listPage, listPageSize, didLoadFilters]);
 
-    // ------------------------------------------------------------
-    // Handle filter changes => update the URL
-    // ------------------------------------------------------------
+    /* ----------------------------------------------------------
+     *  5) handleFilterChange => rewrite URL
+     * ---------------------------------------------------------- */
     function handleFilterChange(newFilters: RealEstateFilterParams) {
         const merged = {...filters, ...newFilters};
-        const queryParams: Record<string, string> = {
-            city: merged.city || "",
-            state: merged.state || "",
-            status: merged.status || "",
-            minPrice: merged.minPrice || "",
-            maxPrice: merged.maxPrice || "",
-            ids: merged.ids || "",
-            address: merged.address || "",
-            zipcode: merged.zipcode || "",
-            propertyTypes: merged.propertyTypes ? merged.propertyTypes.join(",") : "",
-            styles: merged.styles ? merged.styles.join(",") : "",
-            yearBuiltMin: merged.yearBuiltMin?.toString() || "",
-            yearBuiltMax: merged.yearBuiltMax?.toString() || "",
-            glaMin: merged.glaMin?.toString() || "",
-            glaMax: merged.glaMax?.toString() || "",
-            basementSqFtMin: merged.basementSqFtMin?.toString() || "",
-            basementSqFtMax: merged.basementSqFtMax?.toString() || "",
-            basementFinished:
-                merged.basementFinished !== undefined
-                    ? String(merged.basementFinished)
-                    : "",
-            daysBackMin: merged.daysBackMin?.toString() || "",
-            daysBackMax: merged.daysBackMax?.toString() || "",
-        };
-        const query = new URLSearchParams(queryParams).toString();
-        router.replace(`?${query}`, {scroll: false});
+        const qp: Record<string, string> = {};
+
+        if (merged.city) qp.city = merged.city;
+        if (merged.state) qp.state = merged.state;
+        if (merged.status) qp.status = merged.status;
+        if (merged.minPrice) qp.minPrice = merged.minPrice;
+        if (merged.maxPrice) qp.maxPrice = merged.maxPrice;
+        if (merged.ids) qp.ids = merged.ids;
+        if (merged.address) qp.address = merged.address;
+        if (merged.zipcode) qp.zipcode = merged.zipcode;
+        if (merged.propertyTypes && merged.propertyTypes.length > 0) {
+            qp.propertyTypes = merged.propertyTypes.join(",");
+        }
+        if (merged.styles && merged.styles.length > 0) {
+            qp.styles = merged.styles.join(",");
+        }
+        if (merged.yearBuiltMin !== undefined) {
+            qp.yearBuiltMin = String(merged.yearBuiltMin);
+        }
+        if (merged.yearBuiltMax !== undefined) {
+            qp.yearBuiltMax = String(merged.yearBuiltMax);
+        }
+        if (merged.glaMin !== undefined) {
+            qp.glaMin = String(merged.glaMin);
+        }
+        if (merged.glaMax !== undefined) {
+            qp.glaMax = String(merged.glaMax);
+        }
+        if (merged.basementSqFtMin !== undefined) {
+            qp.basementSqFtMin = String(merged.basementSqFtMin);
+        }
+        if (merged.basementSqFtMax !== undefined) {
+            qp.basementSqFtMax = String(merged.basementSqFtMax);
+        }
+        if (merged.basementFinished === true) {
+            qp.basementFinished = "true";
+        } else if (merged.basementFinished === false) {
+            qp.basementFinished = "false";
+        }
+        if (merged.daysBackMin !== undefined) {
+            qp.daysBackMin = String(merged.daysBackMin);
+        }
+        if (merged.daysBackMax !== undefined) {
+            qp.daysBackMax = String(merged.daysBackMax);
+        }
+
+        const queryStr = new URLSearchParams(qp).toString();
+        router.replace(`?${queryStr}`, {scroll: false});
     }
 
-    // ------------------------------------------------------------
-    // Polygon create + update callbacks
-    // ------------------------------------------------------------
+    /* ----------------------------------------------------------
+     *  Polygon create + update
+     * ---------------------------------------------------------- */
     async function handleCreatePolygon(newPolygon: {
         name: string;
         coordinates: { lat: number; lng: number }[];
@@ -226,8 +270,8 @@ export default function RealEstateDashboard() {
                 newPolygon.coordinates,
                 newPolygon.realEstateIds
             );
-            alert("New polygon created successfully!");
-            await loadPolygons(); // refresh polygons list
+            alert("Polygon created successfully!");
+            loadPolygons();
             setSelectedPolygon(created);
             window.dispatchEvent(new Event("polygonCreated"));
         } catch (err) {
@@ -249,7 +293,7 @@ export default function RealEstateDashboard() {
             });
             alert("Polygon updated successfully!");
             setSelectedPolygon(result);
-            await loadPolygons();
+            loadPolygons();
             window.dispatchEvent(new Event("polygonCreated"));
             setEditMode(false);
         } catch (error) {
@@ -258,33 +302,34 @@ export default function RealEstateDashboard() {
         }
     }
 
-    // ------------------------------------------------------------
-    // Build final array for the map (attached + not attached)
-    // ------------------------------------------------------------
-    const attachedIdsSet = new Set(selectedPolygon?.realEstateObjects || []);
-
-    // We'll filter from the single array `mapRealEstates`:
+    /* ----------------------------------------------------------
+     *  Build final array for the map
+     *  BUGFIX: If "showAttached" is false, we *exclude*
+     *  those attached items from the map entirely.
+     * ---------------------------------------------------------- */
     let finalMapData: RealEstateMapDto[] = [];
 
     if (selectedPolygon) {
-        // If a polygon is selected, we want to show either attached or not attached or both
-        const attachedArray = mapRealEstates.filter((re) =>
-            attachedIdsSet.has(re.id)
-        );
-        const notAttachedArray = mapRealEstates.filter(
-            (re) => !attachedIdsSet.has(re.id)
-        );
+        // If not showing attached, remove those IDs from "filtered"
+        let filteredWithoutAttached = mapRealEstates.filtered;
+        if (!showAttached) {
+            const attachedIdsSet = new Set(mapRealEstates.attached.map((a) => a.id));
+            filteredWithoutAttached = filteredWithoutAttached.filter(
+                (re) => !attachedIdsSet.has(re.id)
+            );
+        }
 
-        if (showAttached) finalMapData = finalMapData.concat(attachedArray);
-        if (showNotAttached) finalMapData = finalMapData.concat(notAttachedArray);
+        if (showNotAttached) {
+            finalMapData = [...finalMapData, ...filteredWithoutAttached];
+        }
+        if (showAttached) {
+            finalMapData = [...finalMapData, ...mapRealEstates.attached];
+        }
     } else {
-        // If no polygon is selected, we just show everything
-        finalMapData = mapRealEstates;
+        // No polygon selected => just show the filtered set
+        finalMapData = mapRealEstates.filtered;
     }
 
-    // ------------------------------------------------------------
-    // Prepare pagination object
-    // ------------------------------------------------------------
     const paginationObj: PaginationDTO = {
         page: listPage,
         page_size: listPageSize,
@@ -296,14 +341,20 @@ export default function RealEstateDashboard() {
         <div className="p-4 min-h-screen bg-gray-100">
             <h1 className="text-2xl font-bold mb-4">Real Estate Dashboard</h1>
 
-            {/* Filter form */}
             <RealEstateFilterForm filters={filters} onChange={handleFilterChange}/>
 
             <div className="flex flex-col lg:flex-row mt-4 gap-4">
-                {/* LEFT: Paginated RealEstate list */}
+                {/* LEFT: Paginated List */}
                 <div className="flex-1">
                     <h2 className="text-xl font-semibold mb-2">
-                        Properties List (showing {listRealEstates.length} of {listTotalElements})
+                        Properties List{" "}
+                        {didLoadFilters ? (
+                            <>
+                                (showing {listRealEstates.length} of {listTotalElements})
+                            </>
+                        ) : (
+                            "(loading...)"
+                        )}
                     </h2>
                     {listLoading ? (
                         <div>Loading properties...</div>
@@ -328,8 +379,8 @@ export default function RealEstateDashboard() {
                             <select
                                 value={selectedPolygon ? selectedPolygon.id : ""}
                                 onChange={(e) => {
-                                    const poly = polygons.find((p) => p.id === e.target.value) || null;
-                                    setSelectedPolygon(poly);
+                                    const poly = polygons.find((p) => p.id === e.target.value);
+                                    setSelectedPolygon(poly || null);
                                     setEditMode(false);
                                 }}
                                 className="border rounded p-1"
@@ -372,7 +423,7 @@ export default function RealEstateDashboard() {
                             )}
                         </div>
 
-                        {/* Show/hide checkboxes (attached vs not-attached) */}
+                        {/* Show/hide checkboxes */}
                         {selectedPolygon && (
                             <div className="mb-2 flex gap-4">
                                 <label className="flex items-center">
@@ -404,7 +455,7 @@ export default function RealEstateDashboard() {
                                 "-" +
                                 String(showNotAttached)
                             }
-                            realEstates={finalMapData} // full array (both attached + not attached)
+                            realEstates={finalMapData}
                             attachedIds={selectedPolygon?.realEstateObjects}
                             center={{lat: 40.114955, lng: -111.654923}}
                             zoom={11}
@@ -412,7 +463,9 @@ export default function RealEstateDashboard() {
                             displayPolygon={
                                 selectedPolygon && !editMode ? selectedPolygon : undefined
                             }
-                            editablePolygon={selectedPolygon && editMode ? selectedPolygon : undefined}
+                            editablePolygon={
+                                selectedPolygon && editMode ? selectedPolygon : undefined
+                            }
                             onUpdatePolygon={handleUpdatePolygon}
                             onCreatePolygon={handleCreatePolygon}
                         />

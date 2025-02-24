@@ -18,11 +18,11 @@ public class Polygon extends Model {
     @Column(nullable = false)
     private String name;
 
-    @Lob
+//    @Lob
     @Column(name = "coordinates", columnDefinition = "TEXT")
     private String coordinates;
 
-    @Lob
+//    @Lob
     @Column(name = "real_estate_ids", columnDefinition = "TEXT")
     private String realEstateIds;
 

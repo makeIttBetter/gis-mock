@@ -198,7 +198,7 @@ public class RealEstate extends Model {
 
     @ExportField(fieldName = "basement_finished", displayName = "Basement Finished")
     @Column(name = "basement_finished")
-    private Boolean basementFinished;
+    private Integer basementFinished;
 
     @ExportField(fieldName = "basement_bedrooms", displayName = "Basement Bedrooms")
     @Column(name = "basement_bedrooms")

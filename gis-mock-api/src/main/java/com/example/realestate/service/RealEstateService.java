@@ -6,7 +6,9 @@ import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
 import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.model.RealEstateUpdateDto;
+import com.example.realestate.model.PolygonRealEstate;
 import com.example.realestate.model.RealEstate;
+import com.example.realestate.repository.PolygonRealEstateRepository;
 import com.example.realestate.repository.RealEstateRepository;
 import com.example.realestate.specification.RealEstateSpecification;
 import com.example.realestate.util.PriceParser;
@@ -28,15 +30,17 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
 
 
     private final RealEstateRepository realEstateRepository;
+    private final PolygonRealEstateRepository polygonRealEstateRepository;
     private final RealEstateToRealEstateDtoConverter realEstateConverter;
     private final RealEstatePartialUpdateConverter realEstatePartialUpdateConverter; // << NEW
 
     public RealEstateService(
-            RealEstateRepository realEstateRepository,
+            RealEstateRepository realEstateRepository, PolygonRealEstateRepository polygonRealEstateRepository,
             RealEstateToRealEstateDtoConverter realEstateConverter,
             RealEstatePartialUpdateConverter realEstatePartialUpdateConverter
     ) {
         this.realEstateRepository = realEstateRepository;
+        this.polygonRealEstateRepository = polygonRealEstateRepository;
         this.realEstateConverter = realEstateConverter;
         this.realEstatePartialUpdateConverter = realEstatePartialUpdateConverter;
     }
@@ -187,6 +191,18 @@ public class RealEstateService implements CrudService<RealEstateDto, String> {
                 pageable,
                 pageResult.getTotalElements() // totalElements is still from DB ignoring price filter
         );
+    }
+
+    public List<RealEstateMapDto> getAttachedRealEstateMapDataByPolygonId(String polygonId) {
+        log.info("Fetching attached real estate map data for polygon ID: {}", polygonId);
+        List<PolygonRealEstate> links = polygonRealEstateRepository.findByPolygonId(polygonId);
+        List<String> realEstateIds = links.stream()
+                .map(PolygonRealEstate::getRealEstateId)
+                .collect(Collectors.toList());
+        List<RealEstate> entities = realEstateRepository.findAllById(realEstateIds);
+        return entities.stream()
+                .map(this::toMapDto)
+                .collect(Collectors.toList());
     }
 
     /**

@@ -1,5 +1,5 @@
 "use client";
-import React, {CSSProperties, useCallback, useRef, useState} from "react";
+import React, { CSSProperties, useCallback, useRef, useState } from "react";
 import {
     DrawingManager,
     GoogleMap,
@@ -8,9 +8,9 @@ import {
     Polygon as MapPolygon,
     useLoadScript,
 } from "@react-google-maps/api";
-import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
+import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
 import RealEstateMarkerInfo from "@/components/realestate/RealEstateMarkerInfo";
-import {RealEstateMarkerInfoMode} from "@/components/realestate/RealEstateMarkerInfoMode";
+import { RealEstateMarkerInfoMode } from "@/components/realestate/RealEstateMarkerInfoMode";
 
 const LIBRARIES: ("drawing" | "geometry" | "places" | "visualization")[] = [
     "drawing",
@@ -18,38 +18,23 @@ const LIBRARIES: ("drawing" | "geometry" | "places" | "visualization")[] = [
 ];
 
 export interface RealEstateMapProps {
-    /** All real estate markers (minimal data, now expanded). */
     realEstates: RealEstateMapDto[];
-    /** Optional set of attached IDs if we want to highlight them differently. */
     attachedIds?: string[];
-
-    /** Initial center of map. */
     center?: google.maps.LatLngLiteral;
     zoom?: number;
     containerStyle?: CSSProperties;
 
-    /**
-     * A polygon to display in read-only mode (blue).
-     */
     displayPolygon?: {
         coordinates: { lat: number; lng: number }[];
     };
-
-    /**
-     * A polygon to display in "edit mode" (green).
-     */
     editablePolygon?: {
         coordinates: { lat: number; lng: number }[];
         realEstateObjects: string[];
     };
-
-    /** Called once the user finishes editing an existing polygon. */
     onUpdatePolygon?: (updatedPolygon: {
         coordinates: { lat: number; lng: number }[];
         realEstateIds: string[];
     }) => void;
-
-    /** Called once the user finishes creating a brand-new polygon. */
     onCreatePolygon?: (newPolygon: {
         name: string;
         coordinates: { lat: number; lng: number }[];
@@ -60,15 +45,15 @@ export interface RealEstateMapProps {
 export default function RealEstateMap({
                                           realEstates,
                                           attachedIds,
-                                          center = {lat: 40.114955, lng: -111.654923},
+                                          center = { lat: 40.114955, lng: -111.654923 },
                                           zoom = 11,
-                                          containerStyle = {width: "100%", height: "400px"},
+                                          containerStyle = { width: "100%", height: "400px" },
                                           displayPolygon,
                                           editablePolygon,
                                           onUpdatePolygon,
                                           onCreatePolygon,
                                       }: RealEstateMapProps) {
-    const {isLoaded} = useLoadScript({
+    const { isLoaded } = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: LIBRARIES,
     });
@@ -84,7 +69,7 @@ export default function RealEstateMap({
     const [editablePolygonInstance, setEditablePolygonInstance] =
         useState<google.maps.Polygon | null>(null);
 
-    // InfoWindow states
+    // InfoWindow state
     const [selectedRE, setSelectedRE] = useState<RealEstateMapDto | null>(null);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -110,8 +95,8 @@ export default function RealEstateMap({
     function getPathCoords(path: google.maps.MVCArray<google.maps.LatLng>) {
         const coords: { lat: number; lng: number }[] = [];
         for (let i = 0; i < path.getLength(); i++) {
-            const point = path.getAt(i);
-            coords.push({lat: point.lat(), lng: point.lng()});
+            const pt = path.getAt(i);
+            coords.push({ lat: pt.lat(), lng: pt.lng() });
         }
         return coords;
     }
@@ -158,17 +143,23 @@ export default function RealEstateMap({
         const name = window.prompt("Enter a name for the new polygon:");
         if (!name) return;
 
-        // Figure out which real estate objects are inside
-        const googlePoly = new google.maps.Polygon({paths: draftCoords});
+        // Determine which real estate objects are inside
+        const googlePoly = new google.maps.Polygon({ paths: draftCoords });
         const insideIds: string[] = [];
-        for (const re of realEstates) {
-            if (re.latitude !== null && re.longitude !== null && re.latitude !== undefined && re.longitude !== undefined) {
+
+        realEstates.forEach((re) => {
+            if (
+                re.latitude !== null &&
+                re.latitude !== undefined &&
+                re.longitude !== null &&
+                re.longitude !== undefined
+            ) {
                 const pos = new google.maps.LatLng(re.latitude, re.longitude);
                 if (google.maps.geometry.poly.containsLocation(pos, googlePoly)) {
                     insideIds.push(re.id);
                 }
             }
-        }
+        });
 
         onCreatePolygon({
             name,
@@ -191,24 +182,29 @@ export default function RealEstateMap({
 
     function handleSaveEditablePolygon() {
         if (!editablePolygon || !editablePolygonInstance || !onUpdatePolygon) return;
+
         const path = editablePolygonInstance.getPath();
         const coords = getPathCoords(path);
 
-        // Compute which RE points are inside
-        const googlePoly = new google.maps.Polygon({paths: coords});
+        // Determine which real estate objects are inside
+        const googlePoly = new google.maps.Polygon({ paths: coords });
         const insideIds: string[] = [];
-        for (const re of realEstates) {
-            if (re.latitude !== null && re.longitude !== null && re.latitude !== undefined && re.longitude !== undefined) {
+
+        realEstates.forEach((re) => {
+            if (
+                re.latitude !== null &&
+                re.latitude !== undefined &&
+                re.longitude !== null &&
+                re.longitude !== undefined
+            ) {
                 const pos = new google.maps.LatLng(re.latitude, re.longitude);
                 if (google.maps.geometry.poly.containsLocation(pos, googlePoly)) {
                     insideIds.push(re.id);
                 }
             }
-        }
+        });
 
-        const doSave = window.confirm("Save changes to polygon?");
-        if (!doSave) return;
-
+        if (!window.confirm("Save changes to polygon?")) return;
         onUpdatePolygon({
             coordinates: coords,
             realEstateIds: insideIds,
@@ -225,11 +221,17 @@ export default function RealEstateMap({
             {!editablePolygon && (
                 <div className="mb-2">
                     {isDrawingActive ? (
-                        <button onClick={cancelDrawing} className="px-4 py-2 bg-gray-400 rounded">
+                        <button
+                            onClick={cancelDrawing}
+                            className="px-4 py-2 bg-gray-400 rounded"
+                        >
                             Cancel Drawing
                         </button>
                     ) : (
-                        <button onClick={startDrawing} className="px-4 py-2 bg-blue-600 text-white rounded">
+                        <button
+                            onClick={startDrawing}
+                            className="px-4 py-2 bg-blue-600 text-white rounded"
+                        >
                             Draw New Polygon
                         </button>
                     )}
@@ -243,9 +245,11 @@ export default function RealEstateMap({
                 onLoad={onMapLoad}
             >
                 <DrawingManager
-                    onLoad={(manager) => (drawingManagerRef.current = manager)}
+                    onLoad={(mgr) => (drawingManagerRef.current = mgr)}
                     onOverlayComplete={handleOverlayComplete}
-                    drawingMode={isDrawingActive ? google.maps.drawing.OverlayType.POLYGON : null}
+                    drawingMode={
+                        isDrawingActive ? google.maps.drawing.OverlayType.POLYGON : null
+                    }
                     options={{
                         drawingControl: false,
                         polygonOptions: {
@@ -291,7 +295,8 @@ export default function RealEstateMap({
                 {realEstates.map((re) => {
                     if (
                         re.latitude == null ||
-                        re.longitude == null
+                        re.longitude == null ||
+                        re.longitude === undefined
                     ) {
                         return null;
                     }
@@ -300,7 +305,7 @@ export default function RealEstateMap({
                     return (
                         <Marker
                             key={re.id}
-                            position={{lat: re.latitude, lng: re.longitude}}
+                            position={{ lat: re.latitude, lng: re.longitude }}
                             icon={{
                                 url: isPolyAttached
                                     ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
@@ -311,10 +316,10 @@ export default function RealEstateMap({
                     );
                 })}
 
-                {/* InfoWindow with RealEstateMarkerInfo (MAP_PAGE mode) */}
-                {selectedRE && selectedRE.latitude !== null && selectedRE.longitude !== null && (
+                {/* InfoWindow w/ editing form */}
+                {selectedRE && selectedRE.latitude != null && selectedRE.longitude != null && (
                     <InfoWindow
-                        position={{lat: selectedRE.latitude, lng: selectedRE.longitude}}
+                        position={{ lat: selectedRE.latitude, lng: selectedRE.longitude }}
                         onCloseClick={() => setSelectedRE(null)}
                     >
                         <div>
@@ -334,8 +339,8 @@ export default function RealEstateMap({
                                     latitude: selectedRE.latitude?.toString() || "",
                                     longitude: selectedRE.longitude?.toString() || "",
                                 }}
-                                isAttached={false} // not relevant in MAP_PAGE mode
-                                onToggleAttachment={undefined}
+                                isAttached={attachedIds?.includes(selectedRE.id)}
+                                onToggleAttachment={undefined} // not used in the main map
                                 onClose={() => setSelectedRE(null)}
                                 mode={RealEstateMarkerInfoMode.MAP_PAGE}
                             />

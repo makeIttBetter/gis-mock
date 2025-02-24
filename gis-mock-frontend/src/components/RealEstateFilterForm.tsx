@@ -1,9 +1,8 @@
-// file: src/components/RealEstateFilterForm.tsx
 "use client";
 
-import React, {useEffect, useState} from "react";
-import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
-import {useFilterOptions} from "@/hooks/useFilterOptions";
+import React, { useEffect, useState } from "react";
+import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
+import { useFilterOptions } from "@/hooks/useFilterOptions";
 import TagMultiSelect from "@/components/TagMultiSelect";
 
 interface Props {
@@ -12,14 +11,10 @@ interface Props {
 }
 
 /**
- * A form for filtering real estate data.
- * Features:
- *  - Single-select fields for city, state, status
- *  - Tag-based multi-select for property type and style
- *  - Basic numeric fields for price, year, GLA, etc.
- *  - Basement Finished now has 3 states: All / Yes / No
+ * A form for filtering real estate data, with single- and multi-select,
+ * numeric fields, plus the 3-state BasementFinished (All / Yes / No).
  */
-const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
+const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
     const [localFilters, setLocalFilters] = useState<RealEstateFilterParams>(filters);
 
     // Keep local state in sync whenever "filters" prop changes
@@ -28,56 +23,54 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
     }, [filters]);
 
     // Single select filter options from the backend
-    const {options: cityOptions, loading: cityLoading, error: cityError} = useFilterOptions("city");
-    const {options: stateOptions, loading: stateLoading, error: stateError} = useFilterOptions("state");
-    const {options: statusOptions, loading: statusLoading, error: statusError} = useFilterOptions("status");
+    const {
+        options: cityOptions,
+        loading: cityLoading,
+        error: cityError,
+    } = useFilterOptions("city");
+    const {
+        options: stateOptions,
+        loading: stateLoading,
+        error: stateError,
+    } = useFilterOptions("state");
+    const {
+        options: statusOptions,
+        loading: statusLoading,
+        error: statusError,
+    } = useFilterOptions("status");
 
     // Multi-select filter options
-    const {options: propertyTypeOptions} = useFilterOptions("propertyType");
-    const {options: styleOptions} = useFilterOptions("style");
-
-    /**
-     * Generic text/number change handler for the other fields
-     */
+    const { options: propertyTypeOptions } = useFilterOptions("propertyType");
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
-        const {name, value, type} = e.target;
-
-        // For numeric fields, we can store the raw text as is (or parse to number).
-        // But in the example code, we are storing them as strings in localFilters,
-        // except for "yearBuiltMin" etc. Let's keep consistency:
-        if (type === "checkbox") {
-            // We used to do this for basementFinished, but now we have a select for it.
-            // This is left as-is for any other checkboxes you might add in the future.
-            setLocalFilters((prev) => ({
-                ...prev,
-                [name]: (e.target as HTMLInputElement).checked,
-            }));
-        } else {
-            setLocalFilters((prev) => ({
-                ...prev,
-                [name]: value,
-            }));
-        }
+        const { name, value } = e.target;
+        setLocalFilters((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
     };
 
     /**
      * Special handler for the "Basement Finished" dropdown with 3 states:
-     * - "all" → undefined
-     * - "true" → true
-     * - "false" → false
+     * - "all"  => undefined
+     * - "true" => true
+     * - "false"=> false
      */
-    const handleBasementFinishedChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleBasementFinishedChange = (
+        e: React.ChangeEvent<HTMLSelectElement>
+    ) => {
         const selected = e.target.value;
-        let boolVal: boolean | undefined = undefined;
+        let boolVal: boolean | undefined;
 
         if (selected === "true") {
             boolVal = true;
         } else if (selected === "false") {
             boolVal = false;
+        } else {
+            // "all"
+            boolVal = undefined;
         }
-        // if "all", we keep boolVal = undefined
 
         setLocalFilters((prev) => ({
             ...prev,
@@ -85,9 +78,6 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
         }));
     };
 
-    /**
-     * For the TagMultiSelect fields (propertyTypes or styles).
-     */
     const handleTagMultiSelectChange = (
         field: "propertyTypes" | "styles",
         newSelected: string[]
@@ -98,26 +88,21 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
         }));
     };
 
-    /**
-     * When user clicks "Apply Filters"
-     */
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onChange(localFilters);
     };
 
-    /**
-     * Figure out which select value to show for basementFinished
-     */
-    const basementFinishedValue = localFilters.basementFinished === undefined
-        ? "all"
-        : localFilters.basementFinished
-            ? "true"
-            : "false";
+    // Derive the dropdown value from localFilters.basementFinished
+    const basementFinishedValue =
+        localFilters.basementFinished === undefined
+            ? "all"
+            : localFilters.basementFinished
+                ? "true"
+                : "false";
 
     return (
         <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow space-y-4">
-
             {/* Group 1: Location Filters */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -129,7 +114,7 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                         {cityLoading ? (
                             <div className="text-gray-500 text-sm">Loading city options...</div>
                         ) : cityError ? (
-                            <div className="text-red-500 text-sm">Error loading: {cityError}</div>
+                            <div className="text-red-500 text-sm">Error: {cityError}</div>
                         ) : (
                             <select
                                 name="city"
@@ -153,7 +138,7 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                         {stateLoading ? (
                             <div className="text-gray-500 text-sm">Loading state options...</div>
                         ) : stateError ? (
-                            <div className="text-red-500 text-sm">Error loading: {stateError}</div>
+                            <div className="text-red-500 text-sm">Error: {stateError}</div>
                         ) : (
                             <select
                                 name="state"
@@ -192,9 +177,9 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                     <div>
                         <label className="block text-sm font-medium">Status</label>
                         {statusLoading ? (
-                            <div className="text-gray-500 text-sm">Loading status options...</div>
+                            <div className="text-gray-500 text-sm">Loading status...</div>
                         ) : statusError ? (
-                            <div className="text-red-500 text-sm">Error loading: {statusError}</div>
+                            <div className="text-red-500 text-sm">Error: {statusError}</div>
                         ) : (
                             <select
                                 name="status"
@@ -236,10 +221,9 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                 </div>
             </div>
 
-            {/* Group 3: Property Details & Additional Filters */}
+            {/* Group 3: Property Types / Additional Filters */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                {/* Property Types / Style */}
+                {/* Property Type, Year Built, etc. */}
                 <div className="space-y-2">
                     <h3 className="text-lg font-semibold">Property Details</h3>
 
@@ -254,9 +238,7 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                         />
                     </div>
 
-                    <br/>
-                    <br/>
-
+                    {/* Year Built */}
                     <div className="flex space-x-2">
                         <div className="w-1/2">
                             <label className="block text-sm font-medium">Year Built (Min)</label>
@@ -281,7 +263,7 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                     </div>
                 </div>
 
-                {/* Additional Filters */}
+                {/* GLA, Basement, Days Back */}
                 <div className="space-y-2">
                     <h3 className="text-lg font-semibold">Additional Filters</h3>
 
@@ -331,11 +313,10 @@ const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
                         </div>
                     </div>
 
-                    {/* Basement Finished: select with 3 states */}
+                    {/* Basement Finished: 3-state select */}
                     <div>
                         <label className="block text-sm font-medium">Basement Finished</label>
                         <select
-                            name="basementFinished"
                             value={basementFinishedValue}
                             onChange={handleBasementFinishedChange}
                             className="border rounded p-1 w-full"

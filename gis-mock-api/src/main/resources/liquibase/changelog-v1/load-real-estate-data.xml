@@ -58,7 +58,7 @@
             <column name="total_half_bathrooms" header="Total Half Bathrooms" type="INTEGER"/>
             <column name="total_kitchens" header="Total Kitchens" type="INTEGER"/>
             <column name="basement_square_feet" header="Basement Square Feet" type="INTEGER"/>
-            <column name="basement_finished" header="Basement Finished" type="BOOLEAN"/>
+            <column name="basement_finished" header="Basement Finished" type="INTEGER"/>
             <column name="basement_bedrooms" header="Basement Bedrooms" type="INTEGER"/>
             <column name="basement_full_bathrooms" header="Basement Full Bathrooms" type="INTEGER"/>
             <column name="basement_three_quarter_bathrooms" header="Basement Three-quarter Bathrooms" type="INTEGER"/>

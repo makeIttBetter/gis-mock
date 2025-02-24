@@ -52,7 +52,7 @@ public class RealEstateCsvRecord {
     private Integer totalHalfBathrooms;
     private Integer totalKitchens;
     private Integer basementSquareFeet;
-    private Boolean basementFinished;
+    private Integer basementFinished;
     private Integer basementBedrooms;
     private Integer basementFullBathrooms;
     private Integer basementThreeQuarterBathrooms;

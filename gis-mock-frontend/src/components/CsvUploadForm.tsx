@@ -1,3 +1,4 @@
+// File: src/components/CsvUploadForm.tsx
 "use client";
 import React, {useState} from "react";
 import {uploadCsvFile} from "@/lib/realEstateCsvApi";
@@ -36,15 +37,16 @@ const CsvUploadForm: React.FC = () => {
         if (!file) return;
         setLoading(true);
         try {
-            const result = await uploadCsvFile(file);
+            const result = await uploadCsvFile(file);  // your existing call
             setUploadResult(result);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload error:", error);
-            alert("File upload failed.");
+            alert("File upload failed: " + error?.message || "");
         } finally {
             setLoading(false);
         }
     };
+
 
     /**
      * Generates a client-side CSV download for the not-saved rows.

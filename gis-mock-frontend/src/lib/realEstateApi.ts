@@ -39,12 +39,15 @@ export async function fetchRealEstatePaginated(
 }
 
 /**
- * Fetch minimal real estate data for the map.
+ * Fetch real estate map data with an optional polygon ID.
+ * Returns an object with filtered and attached arrays.
  */
 export async function fetchRealEstateMapData(
-    filters: RealEstateFilterParams
-): Promise<RealEstateMapDto[]> {
-    return apiGet<RealEstateMapDto[]>("REAL_ESTATE_MAP", filters);
+    filters: RealEstateFilterParams,
+    polygonId?: string
+): Promise<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }> {
+    const params = { ...filters, polygonId };
+    return apiGet<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }>("REAL_ESTATE_MAP", params);
 }
 
 /**

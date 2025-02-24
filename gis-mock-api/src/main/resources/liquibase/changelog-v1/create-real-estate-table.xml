@@ -18,17 +18,17 @@
             <column name="city" type="TEXT"/>
             <column name="state" type="TEXT"/>
             <column name="zip" type="VARCHAR(20)"/>
-            <column name="status" type="VARCHAR(50)"/>
+            <column name="status" type="VARCHAR(200)"/>
 
-            <column name="short_sale" type="VARCHAR(50)"/>
-            <column name="time_uc" type="VARCHAR(50)"/>
+            <column name="short_sale" type="TEXT"/>
+            <column name="time_uc" type="VARCHAR(1000)"/>
             <column name="dom" type="INTEGER"/>
             <column name="sold_date" type="DATE"/>
             <column name="sold_terms" type="TEXT"/>
-            <column name="sold_price" type="VARCHAR(50)"/>
+            <column name="sold_price" type="VARCHAR(200)"/>
             <column name="sold_concessions" type="TEXT"/>
-            <column name="list_price" type="VARCHAR(50)"/>
-            <column name="original_list_price" type="VARCHAR(50)"/>
+            <column name="list_price" type="VARCHAR(200)"/>
+            <column name="original_list_price" type="VARCHAR(200)"/>
             <column name="under_contract_date" type="DATE"/>
             <column name="entry_date" type="DATE"/>
             <column name="effective_date_of_listing_agreement" type="DATE"/>
@@ -36,7 +36,7 @@
             <column name="off_market_date" type="DATE"/>
             <column name="reinstated_date" type="DATE"/>
             <column name="cancel_date" type="DATE"/>
-            <column name="offer_under_3rd_party_review" type="VARCHAR(50)"/>
+            <column name="offer_under_3rd_party_review" type="TEXT"/>
             <column name="price_increase_date" type="DATE"/>
             <column name="price_increase_days_back" type="INTEGER"/>
             <column name="price_reduction_date" type="DATE"/>
@@ -44,8 +44,8 @@
             <column name="backup_status_date" type="DATE"/>
             <column name="withdrawal_date" type="DATE"/>
             <column name="expire_date" type="DATE"/>
-            <column name="acres" type="DECIMAL(5,2)"/>
-            <column name="property_type" type="VARCHAR(200)"/>
+            <column name="acres" type="DECIMAL(12,4)"/>
+            <column name="property_type" type="TEXT"/>
             <column name="style" type="TEXT"/>
             <column name="year_built" type="INTEGER"/>
             <column name="gross_living_area_gla" type="INTEGER"/>
@@ -57,7 +57,7 @@
             <column name="total_half_bathrooms" type="INTEGER"/>
             <column name="total_kitchens" type="INTEGER"/>
             <column name="basement_square_feet" type="INTEGER"/>
-            <column name="basement_finished" type="BOOLEAN"/>
+            <column name="basement_finished" type="INTEGER"/>
             <column name="basement_bedrooms" type="INTEGER"/>
             <column name="basement_full_bathrooms" type="INTEGER"/>
             <column name="basement_three_quarter_bathrooms" type="INTEGER"/>

@@ -5,6 +5,7 @@ import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
 import com.example.realestate.dto.model.RealEstateUpdateDto; // << NEW
+import com.example.realestate.service.PolygonService;
 import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST Controller that exposes endpoints to retrieve or update real estate data.
@@ -23,9 +25,11 @@ import java.util.List;
 public class RealEstateController {
 
     private final RealEstateService realEstateService;
+    private final PolygonService polygonService;
 
-    public RealEstateController(RealEstateService realEstateService) {
+    public RealEstateController(RealEstateService realEstateService, PolygonService polygonService) {
         this.realEstateService = realEstateService;
+        this.polygonService = polygonService;
     }
 
     /**
@@ -38,13 +42,22 @@ public class RealEstateController {
     }
 
     /**
-     * NEW: Returns minimal real estate data for map usage.
+     * Returns minimal real estate data for map usage.
      */
     @GetMapping("/map")
-    public ResponseEntity<List<RealEstateMapDto>> getRealEstateMapData(RealEstateFilterDto filterDto) {
-        log.info("GET /api/real-estate/map - filter: {}", filterDto);
-        List<RealEstateMapDto> data = realEstateService.getFilteredRealEstateMapData(filterDto);
-        return ResponseEntity.ok(data);
+    public ResponseEntity<Map<String, List<RealEstateMapDto>>> getRealEstateMapData(
+            RealEstateFilterDto filterDto,
+            @RequestParam(value = "polygonId", required = false) String polygonId) {
+        log.info("GET /api/real-estate/map - filter: {}, polygonId: {}", filterDto, polygonId);
+        List<RealEstateMapDto> filteredData = realEstateService.getFilteredRealEstateMapData(filterDto);
+        List<RealEstateMapDto> attachedData = polygonId != null
+                ? realEstateService.getAttachedRealEstateMapDataByPolygonId(polygonId)
+                : List.of();
+        Map<String, List<RealEstateMapDto>> response = Map.of(
+                "filtered", filteredData,
+                "attached", attachedData
+        );
+        return ResponseEntity.ok(response);
     }
 
     /**

@@ -14,8 +14,6 @@ import java.util.List;
 /**
  * A specification builder for RealEstate. Uses small helper methods
  * to keep each filter condition easy to read and maintain (SRP).
- * Note: We handle "daysBackMin" and "daysBackMax" by simple date comparisons:
- * soldDate <= (today - daysBackMin), etc. This avoids custom SQL functions.
  */
 public class RealEstateSpecification {
 
@@ -261,17 +259,32 @@ public class RealEstateSpecification {
             CriteriaBuilder cb,
             RealEstateFilterDto filter
     ) {
-        if (filter.getBasementFinished() != null) {
-            return cb.and(predicate,
-                    cb.equal(root.get("basementFinished"), filter.getBasementFinished())
+        // If basementFinished is null => do not filter (i.e. "All")
+        Boolean bfVal = filter.getBasementFinished();
+        if (bfVal == null) {
+            return predicate;
+        }
+
+        if (bfVal) {
+            // "Yes" => user wants records where basementFinished is > 0
+            return cb.and(
+                    predicate,
+                    cb.gt(root.get("basementFinished"), 0)
+            );
+        } else {
+            // "No" => user wants records where basementFinished == 0
+            return cb.and(
+                    predicate,
+                    cb.equal(root.get("basementFinished"), 0)
             );
         }
-        return predicate;
     }
+
 
     /**
      * "daysBackMin" means we want records whose difference (now - soldDate) >= daysBackMin.
-     * So, soldDate <= (now - daysBackMin). This is simpler than 'timestampdiff' usage.
+     * So, soldDate <= (now - daysBackMin).
+     * NOTE: We also allow soldDate == null to remain if you do not want to exclude them forcibly.
      */
     private static Predicate applyDaysBackMinFilter(
             Predicate predicate,
@@ -281,17 +294,19 @@ public class RealEstateSpecification {
     ) {
         if (filter.getDaysBackMin() != null) {
             LocalDate cutoff = LocalDate.now().minusDays(filter.getDaysBackMin());
-            // Difference >= daysBackMin => soldDate <= cutoff
             return cb.and(predicate,
-                    cb.lessThanOrEqualTo(root.get("soldDate"), cutoff)
+                    // This or() allows soldDate null to remain.
+                    cb.or(
+                            cb.isNull(root.get("soldDate")),
+                            cb.lessThanOrEqualTo(root.get("soldDate"), cutoff)
+                    )
             );
         }
         return predicate;
     }
 
     /**
-     * "daysBackMax" means difference (now - soldDate) <= daysBackMax.
-     * So, soldDate >= (now - daysBackMax).
+     * "daysBackMax" means difference (now - soldDate) <= daysBackMax => soldDate >= (now - daysBackMax).
      */
     private static Predicate applyDaysBackMaxFilter(
             Predicate predicate,
@@ -301,9 +316,11 @@ public class RealEstateSpecification {
     ) {
         if (filter.getDaysBackMax() != null) {
             LocalDate cutoff = LocalDate.now().minusDays(filter.getDaysBackMax());
-            // Difference <= daysBackMax => soldDate >= cutoff
             return cb.and(predicate,
-                    cb.greaterThanOrEqualTo(root.get("soldDate"), cutoff)
+                    cb.or(
+                            cb.isNull(root.get("soldDate")),
+                            cb.greaterThanOrEqualTo(root.get("soldDate"), cutoff)
+                    )
             );
         }
         return predicate;

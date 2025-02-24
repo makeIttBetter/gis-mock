@@ -8,6 +8,7 @@ import com.example.realestate.repository.PolygonRealEstateRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PolygonToPolygonDtoConverter implements Converter<Polygon, PolygonDto> {
@@ -24,6 +26,7 @@ public class PolygonToPolygonDtoConverter implements Converter<Polygon, PolygonD
 
     @Override
     public PolygonDto convert(Polygon source) {
+        log.info("Converting Polygon to PolygonDto");
         PolygonDto dto = new PolygonDto();
         dto.setId(source.getId());
         dto.setName(source.getName());

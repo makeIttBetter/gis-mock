@@ -1,6 +1,6 @@
 "use client";
 import React, {useCallback, useEffect, useRef, useState} from "react";
-import {GoogleMap, InfoWindow, Marker, Polygon as MapPolygon, useLoadScript} from "@react-google-maps/api";
+import {GoogleMap, InfoWindow, Marker, Polygon as MapPolygon, useLoadScript,} from "@react-google-maps/api";
 import {fetchPolygonById, updatePolygon} from "@/lib/polygonApi";
 import {fetchRealEstateMapData} from "@/lib/realEstateApi";
 import {PolygonDTO} from "@/interfaces/PolygonDTO";
@@ -15,10 +15,11 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
     const [polygon, setPolygon] = useState<PolygonDTO | null>(null);
     const [polygonName, setPolygonName] = useState<string>("");
 
+    // ArcGIS references
     const [arcgisLayerUrl, setArcgisLayerUrl] = useState<string | null>(null);
     const [arcgisPolygonUrl, setArcgisPolygonUrl] = useState<string | null>(null);
 
-    // (B) Real estate markers
+    // (B) Real estate markers (combined array)
     const [allRealEstates, setAllRealEstates] = useState<RealEstateMapDto[]>([]);
     const [attachedSet, setAttachedSet] = useState<Set<string>>(new Set());
 
@@ -34,17 +35,19 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
     const defaultZoom = 10;
     const polygonRef = useRef<google.maps.Polygon | null>(null);
 
-    // (E) InfoWindow handling
+    // (E) InfoWindow (selected marker)
     const [selectedMarker, setSelectedMarker] = useState<RealEstateMapDto | null>(null);
 
-    // (F) Show/hide “attached” vs “not attached”
+    // (F) Toggles
     const [showNotAttached, setShowNotAttached] = useState<boolean>(true);
     const [showAttached, setShowAttached] = useState<boolean>(true);
 
     // (G) Loading state for "Save Polygon"
     const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
-    // 1) Load polygon by ID
+    /* --------------------------------------
+     * 1) Load polygon by ID
+     * -------------------------------------- */
     const loadPolygon = useCallback(async () => {
         try {
             const p = await fetchPolygonById(polygonId);
@@ -55,14 +58,11 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
             setPolygon(p);
             setPolygonName(p.name || "");
 
-            // ArcGIS links
-            const arcgisBase =
-                "https://indic74dbdb0c967.maps.arcgis.com/home/item.html?id=";
+            const arcgisBase = "https://indic74dbdb0c967.maps.arcgis.com/home/item.html?id=";
             setArcgisLayerUrl(p.arcgisLayerId ? arcgisBase + p.arcgisLayerId : null);
-            setArcgisPolygonUrl(
-                p.arcgisPolygonId ? arcgisBase + p.arcgisPolygonId : null
-            );
+            setArcgisPolygonUrl(p.arcgisPolygonId ? arcgisBase + p.arcgisPolygonId : null);
 
+            // Set attached IDs
             const attachedIds = p.realEstateObjects || [];
             setAttachedSet(new Set(attachedIds));
         } catch (error) {
@@ -71,17 +71,40 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
         }
     }, [polygonId]);
 
-    // 2) Load Real Estate markers
+    /* --------------------------------------
+     * 2) Load real estate (filtered + attached)
+     *    from fetchRealEstateMapData.
+     *    We'll combine them into a single array.
+     * -------------------------------------- */
     const loadRealEstates = useCallback(async () => {
         try {
-            const data = await fetchRealEstateMapData(filters);
-            setAllRealEstates(data);
+            // fetchRealEstateMapData returns { filtered, attached }
+            // We'll combine them into one array, ignoring duplicates if any.
+            // The polygonId is not needed if we only want the filter data,
+            // but if we want *both*, let's pass the polygonId as well.
+            const data = await fetchRealEstateMapData(filters, polygonId);
+
+            const filteredArr = data.filtered ?? [];
+            const attachedArr = data.attached ?? [];
+
+            // Combine them, removing duplicates
+            // We can do so by ID-based logic:
+            const combinedMap = new Map<string, RealEstateMapDto>();
+            [...filteredArr, ...attachedArr].forEach((re) => {
+                combinedMap.set(re.id, re);
+            });
+            const combined = Array.from(combinedMap.values());
+
+            setAllRealEstates(combined);
         } catch (error) {
             console.error("Error loading real estate map data:", error);
             alert("Failed to load real estate map data.");
         }
-    }, [filters]);
+    }, [filters, polygonId]);
 
+    /* --------------------------------------
+     * 3) Fetch polygon & real estate on mount
+     * -------------------------------------- */
     useEffect(() => {
         loadPolygon();
     }, [loadPolygon]);
@@ -97,33 +120,41 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
         return <div>Loading polygon details...</div>;
     }
 
-    // Build the polygon path
+    /* --------------------------------------
+     * 4) Compute the polygon path
+     * -------------------------------------- */
     function getGooglePath(): google.maps.LatLngLiteral[] {
         if (!polygon?.coordinates) return [];
         return polygon.coordinates.map((c) => ({lat: c.lat, lng: c.lng}));
     }
 
     const path = getGooglePath();
+
     let mapCenter = defaultCenter;
     if (path.length > 0) {
         mapCenter = {lat: path[0].lat, lng: path[0].lng};
     }
 
-    // Show/hide markers logic
+    /* --------------------------------------
+     * 5) Decide which real estate to display,
+     *    based on 'attachedSet' & toggles
+     * -------------------------------------- */
     const displayedRealEstates = allRealEstates.filter((re) => {
-        const isCurrentlyAttached = attachedSet.has(re.id);
-        if (isCurrentlyAttached && !showAttached) return false;
-        if (!isCurrentlyAttached && !showNotAttached) return false;
-        return true;
+        const isAttached = attachedSet.has(re.id);
+        if (isAttached && !showAttached) return false;
+        return !(!isAttached && !showNotAttached);
+
     });
 
-    // Save changes to polygon in DB
+    /* --------------------------------------
+     * 6) Save changes to polygon in DB
+     * -------------------------------------- */
     async function handleSavePolygonChanges() {
         if (!polygon) return;
         setIsUpdating(true);
 
         try {
-            // Rebuild coordinates from the map instance if needed
+            // Rebuild coords from actual polygon if user moved it
             let coords = polygon.coordinates;
             if (polygonRef.current) {
                 const pathArr = polygonRef.current.getPath();
@@ -134,7 +165,7 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
                 }
             }
 
-            // Convert the attachedSet to an array
+            // Convert attachedSet to array
             const reIds = Array.from(attachedSet);
 
             // Update polygon
@@ -143,6 +174,7 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
                 coordinates: coords,
                 realEstateIds: reIds,
             });
+
             alert("Polygon updated successfully!");
 
             setPolygon(updated);
@@ -156,7 +188,9 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
         }
     }
 
-    // Toggle attach/detach for a marker
+    /* --------------------------------------
+     * 7) Toggle attach/detach
+     * -------------------------------------- */
     function handleToggleAttachment(marker: RealEstateMapDto) {
         const newSet = new Set(attachedSet);
         if (newSet.has(marker.id)) {
@@ -167,6 +201,9 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
         setAttachedSet(newSet);
     }
 
+    /* --------------------------------------
+     * 8) Return the UI
+     * -------------------------------------- */
     return (
         <div className="space-y-4">
             {/* Polygon Info */}
@@ -220,10 +257,13 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
             {/* Filter Form */}
             <div className="bg-white p-4 rounded shadow">
                 <h3 className="text-lg font-semibold mb-2">Filter Real Estate</h3>
-                <RealEstateFilterForm filters={filters} onChange={(newFilters) => setFilters(newFilters)}/>
+                <RealEstateFilterForm
+                    filters={filters}
+                    onChange={(newFilters) => setFilters(newFilters)}
+                />
             </div>
 
-            {/* Show/hide checkboxes */}
+            {/* Show/hide toggles */}
             <div className="bg-white p-4 rounded shadow flex gap-8 items-center">
                 <label className="flex items-center space-x-2">
                     <input
@@ -243,8 +283,11 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
                 </label>
             </div>
 
-            {/* MAP */}
-            <div style={{width: "100%", height: "500px"}} className="border rounded overflow-hidden">
+            {/* Map */}
+            <div
+                style={{width: "100%", height: "500px"}}
+                className="border rounded overflow-hidden"
+            >
                 <GoogleMap
                     mapContainerStyle={{width: "100%", height: "100%"}}
                     center={mapCenter}
@@ -281,8 +324,8 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
                                 position={{lat: re.latitude, lng: re.longitude}}
                                 icon={{
                                     url: isAttached
-                                        ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-                                        : "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        ? "/yellow-dot.png"
+                                        : "/red-dot.png",
                                 }}
                                 onClick={() => setSelectedMarker(re)}
                             />
@@ -290,40 +333,47 @@ export default function PolygonEditor({polygonId}: { polygonId: string }) {
                     })}
 
                     {/* Info Window */}
-                    {selectedMarker && selectedMarker.latitude !== null && selectedMarker.longitude !== null && (
-                        <InfoWindow
-                            position={{lat: selectedMarker.latitude, lng: selectedMarker.longitude}}
-                            onCloseClick={() => setSelectedMarker(null)}
-                        >
-                            <div>
-                                <RealEstateMarkerInfo
-                                    realEstate={{
-                                        id: selectedMarker.id,
-                                        mlsNumber: selectedMarker.mlsNumber || "",
-                                        soldTerms: selectedMarker.soldTerms || "",
-                                        soldPrice: selectedMarker.soldPrice || "",
-                                        taxId: selectedMarker.taxId || "",
-                                        address: selectedMarker.address || "",
-                                        city: selectedMarker.city || "",
-                                        state: selectedMarker.state || "",
-                                        zip: selectedMarker.zip || "",
-                                        status: selectedMarker.status || "",
-                                        listPrice: "",
-                                        latitude: selectedMarker.latitude?.toString() || "",
-                                        longitude: selectedMarker.longitude?.toString() || "",
-                                    }}
-                                    isAttached={attachedSet.has(selectedMarker.id)}
-                                    onToggleAttachment={() => handleToggleAttachment(selectedMarker)}
-                                    onClose={() => setSelectedMarker(null)}
-                                    mode={RealEstateMarkerInfoMode.POLYGON_EDIT_PAGE}
-                                />
-                            </div>
-                        </InfoWindow>
-                    )}
+                    {selectedMarker &&
+                        selectedMarker.latitude !== null &&
+                        selectedMarker.longitude !== null && (
+                            <InfoWindow
+                                position={{
+                                    lat: selectedMarker.latitude,
+                                    lng: selectedMarker.longitude,
+                                }}
+                                onCloseClick={() => setSelectedMarker(null)}
+                            >
+                                <div>
+                                    <RealEstateMarkerInfo
+                                        realEstate={{
+                                            id: selectedMarker.id,
+                                            mlsNumber: selectedMarker.mlsNumber || "",
+                                            soldTerms: selectedMarker.soldTerms || "",
+                                            soldPrice: selectedMarker.soldPrice || "",
+                                            taxId: selectedMarker.taxId || "",
+                                            address: selectedMarker.address || "",
+                                            city: selectedMarker.city || "",
+                                            state: selectedMarker.state || "",
+                                            zip: selectedMarker.zip || "",
+                                            status: selectedMarker.status || "",
+                                            listPrice: "",
+                                            latitude: selectedMarker.latitude?.toString() || "",
+                                            longitude: selectedMarker.longitude?.toString() || "",
+                                        }}
+                                        isAttached={attachedSet.has(selectedMarker.id)}
+                                        onToggleAttachment={() =>
+                                            handleToggleAttachment(selectedMarker)
+                                        }
+                                        onClose={() => setSelectedMarker(null)}
+                                        mode={RealEstateMarkerInfoMode.POLYGON_EDIT_PAGE}
+                                    />
+                                </div>
+                            </InfoWindow>
+                        )}
                 </GoogleMap>
             </div>
 
-            {/* SAVE BUTTON */}
+            {/* Save button */}
             <br/>
             <div className="flex justify-center mt-4 items-center">
                 <button
