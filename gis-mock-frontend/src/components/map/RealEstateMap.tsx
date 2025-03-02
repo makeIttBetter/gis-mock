@@ -4,7 +4,7 @@ import {
     DrawingManager,
     GoogleMap,
     InfoWindow,
-    Marker,
+    Marker as AdvancedMarkerElement,
     Polygon as MapPolygon,
     useLoadScript,
 } from "@react-google-maps/api";
@@ -295,15 +295,14 @@ export default function RealEstateMap({
                 {realEstates.map((re) => {
                     if (
                         re.latitude == null ||
-                        re.longitude == null ||
-                        re.longitude === undefined
+                        re.longitude == null
                     ) {
                         return null;
                     }
                     const isPolyAttached = attachedIds?.includes(re.id) ?? false;
 
                     return (
-                        <Marker
+                        <AdvancedMarkerElement
                             key={re.id}
                             position={{ lat: re.latitude, lng: re.longitude }}
                             icon={{

@@ -1,8 +1,12 @@
-// File: frontend/src/app/(site)/map/page.tsx
 "use client";
-import React from "react";
-import RealEstateDashboard from "@/components/RealEstateDashboard";
+
+import React, { Suspense } from "react";
+import RealEstateDashboardContainer from "@/components/dashboard/RealEstateDashboardContainer";
 
 export default function MapPage() {
-    return <RealEstateDashboard />;
+    return (
+        <Suspense fallback={<div>Loading map...</div>}>
+            <RealEstateDashboardContainer />
+        </Suspense>
+    );
 }
