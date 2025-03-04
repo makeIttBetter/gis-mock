@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: ./gis-mock-api
+      dockerfile: Dockerfile
+    container_name: gis-mock-api
+    env_file:
+      - ./.env
+    environment:
+      - JAVA_OPTS=-Xmx512m
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./gis-mock-frontend
+      dockerfile: Dockerfile
+    container_name: gis-mock-frontend
+    env_file:
+      - ./.env
+    environment:
+      # Pass the backend URL to the frontend (make sure this matches your backend port)
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:${SERVER_PORT}
+    ports:
+      - "3001:3000"
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - './nginx.conf:/etc/nginx/nginx.conf:ro'
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

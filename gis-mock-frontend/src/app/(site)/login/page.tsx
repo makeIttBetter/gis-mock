@@ -26,13 +26,17 @@ export default function LoginPage() {
                 }
             );
 
+            console.log("response", response);
+
             if (!response.ok) {
+                console.error("Sign-in failed:", response);
                 const errData = await response.json().catch(() => ({}));
                 throw new Error(errData.message || "Sign-in failed.");
             }
 
             const data = await response.json();
             if (!data.token) {
+                console.error("No token returned from server:", data);
                 throw new Error("No token returned from server");
             }
 
@@ -43,8 +47,9 @@ export default function LoginPage() {
             const maxAge = 24 * 60 * 60; // 1 day in seconds
             document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=Strict;`;
 
+            console.log("Sign-in successful! Redirecting to /map...");
             // Redirect to the homepage (or any other protected route)
-            router.push("/");
+            router.push("/map");
         } catch (err: any) {
             setError(err.message);
         }

@@ -1,11 +1,12 @@
 package com.example.realestate.model;
 
-import com.example.realestate.model.Model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import lombok.*;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Represents a role (e.g. "ADMIN", "USER") that can be assigned to a User.

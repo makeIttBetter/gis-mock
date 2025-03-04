@@ -2,7 +2,6 @@ package com.example.realestate.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.*;
 
@@ -18,11 +17,11 @@ public class Polygon extends Model {
     @Column(nullable = false)
     private String name;
 
-//    @Lob
+    //    @Lob
     @Column(name = "coordinates", columnDefinition = "TEXT")
     private String coordinates;
 
-//    @Lob
+    //    @Lob
     @Column(name = "real_estate_ids", columnDefinition = "TEXT")
     private String realEstateIds;
 

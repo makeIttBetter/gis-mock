@@ -9,7 +9,9 @@ COPY pom.xml ./
 COPY src ./src
 
 # Copy the .env file
-COPY .env .
+#COPY .env .
+# Download the dependencies
+RUN mvn dependency:go-offline -B
 
 # Package the application (build the JAR file)
 RUN mvn clean package -DskipTests
@@ -27,7 +29,7 @@ COPY --from=build /app/target/*.jar app.jar
 COPY . .
 
 ## Expose the application port
-#EXPOSE 8080
+EXPOSE 8080
 
 # Run the jar file
 ENTRYPOINT ["java", "-jar", "app.jar"]

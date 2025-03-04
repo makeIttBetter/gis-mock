@@ -38,22 +38,34 @@ function encodePath(path: string): string {
  */
 export async function apiGet<T>(
     endpoint: keyof typeof API_ENDPOINTS,
-    queryParams?: Record<string, any>
+    queryParams?: Record<string, any>,
+    headers?: Record<string, string>
 ): Promise<T> {
     const baseUrl = API_ENDPOINTS[endpoint];
     const url = queryParams ? `${baseUrl}?${toQueryString(queryParams)}` : baseUrl;
 
+    // Define default headers
+    const defaultHeaders = {
+        "Accept": "application/json",
+    };
+
+    // Merge default headers with any additional headers provided
+    const mergedHeaders = {
+        ...defaultHeaders,
+        ...headers,
+    };
+
     const res = await fetch(url, {
         method: "GET",
-        headers: {
-            "Accept": "application/json",
-        },
+        headers: mergedHeaders,
         credentials: "include",
     });
+
     if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || `GET ${url} failed: ${res.status}`);
     }
+
     return res.json() as Promise<T>;
 }
 

@@ -1,6 +1,9 @@
 package com.example.realestate.annotations;
 
-import java.lang.annotation.*;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Annotation used to mark fields or getter methods for export.
@@ -11,5 +14,6 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD, ElementType.METHOD})
 public @interface ExportField {
     String fieldName();
+
     String displayName();
 }

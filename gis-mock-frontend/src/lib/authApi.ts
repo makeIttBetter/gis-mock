@@ -4,7 +4,7 @@
  * including verifying the JWT token via backend.
  */
 
-import {API_ENDPOINTS} from "@/config";
+// import {API_ENDPOINTS} from "@/config";
 
 /**
  * The response shape from /api/auth/verify
@@ -21,8 +21,12 @@ interface TokenVerificationResponse {
  * If it's valid, return true. Otherwise throw an Error or return false.
  */
 export async function verifyToken(cookieHeader: string): Promise<boolean> {
+    console.log("Verifying token...");
     // Build the URL from your config
-    const url = `${API_ENDPOINTS.AUTH_VERIFY}`;
+    // const url = `${API_ENDPOINTS.AUTH_VERIFY}`;
+    const url = `${process.env.INTERNAL_BACKEND_URL}/api/auth/verify`; // Use internal URL
+
+    console.log("Verifying token at:", url);
 
     // Because the Next.js middleware runs on the server side,
     // we can pass the `cookieHeader` from the incoming request
@@ -34,8 +38,10 @@ export async function verifyToken(cookieHeader: string): Promise<boolean> {
         },
         // 'credentials: include' not strictly needed on the server,
         // but included for consistency.
-        credentials: "include",
+        // credentials: "include",
     });
+
+    console.log("Token verification response:", res);
 
     if (!res.ok) {
         // e.g. 401 means invalid or missing token

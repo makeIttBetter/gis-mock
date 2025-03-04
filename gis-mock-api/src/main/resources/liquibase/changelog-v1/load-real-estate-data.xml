@@ -30,7 +30,8 @@
             <column name="original_list_price" header="Original List Price" type="STRING"/>
             <column name="under_contract_date" header="Under Contract Date" type="DATE"/>
             <column name="entry_date" header="Entry Date" type="DATE"/>
-            <column name="effective_date_of_listing_agreement" header="Effective Date Of The Listing Agreement" type="DATE"/>
+            <column name="effective_date_of_listing_agreement" header="Effective Date Of The Listing Agreement"
+                    type="DATE"/>
             <column name="status_change_date" header="Status Change Date" type="DATE"/>
             <column name="off_market_date" header="Off Market Date" type="DATE"/>
             <column name="reinstated_date" header="Reinstated Date" type="DATE"/>

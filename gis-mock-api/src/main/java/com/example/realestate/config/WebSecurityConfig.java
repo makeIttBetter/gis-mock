@@ -66,6 +66,7 @@ public class WebSecurityConfig {
                         .requestMatchers(
                                 "/api/auth/signup",
                                 "/api/auth/signin",
+                                "/api/auth/verify",
                                 // Add any public endpoints, like your map endpoints
                                 "/api/google/oauth/callback",  // If needed for Google callback
                                 "/api/google/oauth/init",      // Start OAuth2 flow

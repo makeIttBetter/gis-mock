@@ -3,7 +3,7 @@ package com.example.realestate.dto.profile;
 import lombok.Data;
 
 /**
- * Fields sent by the frontend when the user updates 
+ * Fields sent by the frontend when the user updates
  * their username/password on the profile page.
  */
 @Data

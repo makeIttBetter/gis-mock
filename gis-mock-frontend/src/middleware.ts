@@ -1,6 +1,6 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/authApi"; // import your new function
+import type {NextRequest} from "next/server";
+import {NextResponse} from "next/server";
+import {verifyToken} from "@/lib/authApi"; // import your new function
 
 // Debug logging (remove in production)
 console.log("Middleware loaded");
@@ -8,40 +8,37 @@ console.log("Middleware loaded");
 // This must match whatever you have in config or environment for your API endpoints.
 // But typically, you'll rely on the "verifyToken(cookieHeader)" to do the actual request.
 export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
-    console.log("Middleware started processing request for:", pathname);
+    const {pathname} = request.nextUrl;
+    console.log("Middleware processing:", pathname);
 
-    // Allow requests to these paths without redirection:
     if (
-        pathname.startsWith("/_next") ||    // Next.js internal files
+        pathname.startsWith("/_next") ||
         pathname.startsWith("/favicon.ico") ||
         pathname.startsWith("/login") ||
-        pathname.startsWith("/api/auth")    // if your Next routes for auth are public
+        pathname.startsWith("/api")
     ) {
+        console.log("Skipping token check for:", pathname);
         return NextResponse.next();
     }
 
-    // Grab the cookie header from the incoming request
     const cookieHeader = request.headers.get("cookie") || "";
+    console.log("Cookie header:", cookieHeader);
 
-    // We can do a quick check if the "jwtToken" is present at all,
-    // but let's rely on verifyToken() which returns false if invalid or missing.
     try {
         const isValid = await verifyToken(cookieHeader);
+        console.log("Token validity:", isValid);
 
         if (isValid) {
-            console.log("JWT token verified successfully, continuing request.");
+            console.log("Token valid, proceeding.");
             return NextResponse.next();
         } else {
-            // If not valid, redirect to /login
-            console.log("JWT token is invalid or expired. Redirecting to /login");
+            console.log("Token invalid, redirecting to /login");
             const loginUrl = request.nextUrl.clone();
             loginUrl.pathname = "/login";
             return NextResponse.redirect(loginUrl);
         }
     } catch (error) {
-        console.error("Error verifying token:", error);
-        // In case of error, also redirect to /login
+        console.error("Token verification error:", error);
         const loginUrl = request.nextUrl.clone();
         loginUrl.pathname = "/login";
         return NextResponse.redirect(loginUrl);

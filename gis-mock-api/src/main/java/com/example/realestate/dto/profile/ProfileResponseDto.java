@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
- * Returned after reading/updating profile, 
+ * Returned after reading/updating profile,
  * containing the final (possibly updated) username.
  */
 @Data

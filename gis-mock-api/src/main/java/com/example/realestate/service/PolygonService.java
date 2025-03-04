@@ -260,7 +260,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
 
     /**
      * ADDED: Renames the ArcGIS layers (dataset + polygon) to reflect the new polygon name.
-     *        We add suffixes ("(DataSet)" and "(Polygon)") to differentiate them.
+     * We add suffixes ("(DataSet)" and "(Polygon)") to differentiate them.
      */
     private void renameArcGisLayers(Polygon polygon, String newName) {
         // If the polygon has no ArcGIS IDs, skip

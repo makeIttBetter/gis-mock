@@ -88,6 +88,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 log.info("Authenticated user: {}", username);
             }
         }
+        log.info("JWT filter complete, continuing chain");
         chain.doFilter(request, response);
     }
 }

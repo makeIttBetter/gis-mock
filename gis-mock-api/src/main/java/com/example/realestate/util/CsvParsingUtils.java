@@ -75,10 +75,10 @@ public final class CsvParsingUtils {
 
         // We might have either 2‐digit or 4‐digit year. Let's try multiple patterns:
         String[] patterns = {
-            "M/d/uuuu",    // e.g. 9/19/2024
-            "M/d/yy",      // e.g. 9/19/24
-            "MM/dd/uuuu",  // e.g. 09/19/2024
-            "uuuu-MM-dd"   // fallback if the string is ISO format
+                "M/d/uuuu",    // e.g. 9/19/2024
+                "M/d/yy",      // e.g. 9/19/24
+                "MM/dd/uuuu",  // e.g. 09/19/2024
+                "uuuu-MM-dd"   // fallback if the string is ISO format
         };
 
         for (String p : patterns) {
