@@ -45,7 +45,8 @@ export default function LoginPage() {
 
             // ORIGINAL HTTPOnly cookie logic (for reference):
             const maxAge = 24 * 60 * 60; // 1 day in seconds
-            document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=Strict;`;
+            // document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=Strict;`;
+            document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=None; Secure;`;
 
             console.log("Sign-in successful! Redirecting to /map...");
             // Redirect to the homepage (or any other protected route)
