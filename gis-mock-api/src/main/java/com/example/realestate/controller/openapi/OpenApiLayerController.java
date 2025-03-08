@@ -19,7 +19,7 @@ import java.util.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/openApi/layers")
+@RequestMapping("/api/openApi/layers")
 public class OpenApiLayerController {
 
     private final PolygonService polygonService;
