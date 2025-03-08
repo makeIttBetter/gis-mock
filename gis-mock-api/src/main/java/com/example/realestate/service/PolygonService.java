@@ -90,11 +90,11 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         Polygon saved = polygonRepository.save(polygon);
 
         // 4) Create ArcGIS layers and set arcgis IDs
-        String dataUrl = "https://mytestapp.online/api/gis/mock-dots";
+        String dataUrl = "https://mytestapp.online/openApi/layers" + saved.getId();
         String arcgisLayerId = arcgisLayerService.createLayer(saved.getName() + " (DataSet)", dataUrl);
         saved.setArcgisLayerId(arcgisLayerId);
 
-        String polygonDataUrl = "https://mytestapp.online/api/gis/mock-polygon";
+        String polygonDataUrl = "https://mytestapp.online/openApi/layers/" + saved.getId() + "/feature-collection";
         String arcgisPolygonId = arcgisLayerService.createLayer(saved.getName() + " (Polygon)", polygonDataUrl);
         saved.setArcgisPolygonId(arcgisPolygonId);
 

@@ -67,6 +67,8 @@ public class WebSecurityConfig {
                                 "/api/auth/signup",
                                 "/api/auth/signin",
                                 "/api/auth/verify",
+                                // openApi endpoints
+                                "/openApi/layers/**",
                                 // Add any public endpoints, like your map endpoints
                                 "/api/google/oauth/callback",  // If needed for Google callback
                                 "/api/google/oauth/init",      // Start OAuth2 flow

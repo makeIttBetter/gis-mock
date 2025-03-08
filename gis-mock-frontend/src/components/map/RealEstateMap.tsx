@@ -307,8 +307,8 @@ export default function RealEstateMap({
                             position={{ lat: re.latitude, lng: re.longitude }}
                             icon={{
                                 url: isPolyAttached
-                                    ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-                                    : "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                    ? "/yellow-dot.png"
+                                    : "/red-dot.png",
                             }}
                             onClick={() => setSelectedRE(re)}
                         />
