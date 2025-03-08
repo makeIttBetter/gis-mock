@@ -33,6 +33,7 @@ export async function verifyToken(cookieHeader: string): Promise<boolean> {
     // to the backend, thus including the 'jwtToken' HttpOnly cookie.
     const res = await fetch(url, {
         method: "GET",
+        credentials: 'include',
         headers: {
             Cookie: cookieHeader,
         },
