@@ -4,6 +4,7 @@ import com.example.realestate.model.PolygonRealEstate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,5 +27,5 @@ public interface PolygonRealEstateRepository extends JpaRepository<PolygonRealEs
     @Modifying
     @Transactional
     @Query("DELETE FROM PolygonRealEstate pr WHERE pr.polygonId = :polygonId")
-    void deleteByPolygonId(String polygonId);
+    void deleteByPolygonId(@Param("polygonId") String polygonId);
 }
