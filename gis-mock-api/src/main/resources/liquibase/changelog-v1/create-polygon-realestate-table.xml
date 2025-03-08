@@ -34,14 +34,18 @@
                 baseColumnNames="polygon_id"
                 referencedTableName="polygon"
                 referencedColumnNames="id"
-                constraintName="fk_polygon_real_estate_polygon"/>
+                constraintName="fk_polygon_real_estate_polygon"
+                onDelete="CASCADE"
+        />
 
         <addForeignKeyConstraint
                 baseTableName="polygon_real_estate"
                 baseColumnNames="real_estate_id"
                 referencedTableName="real_estate"
                 referencedColumnNames="id"
-                constraintName="fk_polygon_real_estate_real_estate"/>
+                constraintName="fk_polygon_real_estate_real_estate"
+                onDelete="CASCADE"
+        />
 
         <!-- Add indexes for performance -->
         <createIndex indexName="idx_polygon_id" tableName="polygon_real_estate">

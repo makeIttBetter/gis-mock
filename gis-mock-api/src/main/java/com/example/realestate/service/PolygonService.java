@@ -195,7 +195,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     }
 
     @Override
-    @Transactional(readOnly = false)
+    @Transactional
     public void delete(String id) {
         log.info("Deleting polygon with ID: {}", id);
         String currentUserId = securityService.getCurrentUserId();
@@ -217,8 +217,8 @@ public class PolygonService implements CrudService<PolygonDto, String> {
             arcgisLayerService.deleteLayer(polygon.getArcgisPolygonId());
         }
 
-        // Remove from link table
-        removePolygonRealEstateLinks(id);
+//        // Remove from link table
+//        removePolygonRealEstateLinks(id);
 
         // Finally remove polygon itself
         polygonRepository.deleteById(id);
