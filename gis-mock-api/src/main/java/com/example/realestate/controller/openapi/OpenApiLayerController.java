@@ -37,7 +37,7 @@ public class OpenApiLayerController {
      * @return The rounded value.
      */
     private double roundCoordinate(double value) {
-        return new BigDecimal(value).setScale(6, RoundingMode.HALF_UP).doubleValue();
+        return new BigDecimal(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
 
     /**
