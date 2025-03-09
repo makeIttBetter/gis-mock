@@ -4,7 +4,6 @@ import com.example.realestate.dto.model.CoordinateDto;
 import com.example.realestate.dto.model.PolygonDto;
 import com.example.realestate.service.PolygonService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +34,7 @@ public class OpenApiLayerController {
      * @param polygonId the ID of the polygon
      * @return GeoJSON Feature representing the polygon
      */
-    @GetMapping("/{polygonId}")
+    @GetMapping(value = "/{polygonId}", produces = "application/geo+json")
     public ResponseEntity<Map<String, Object>> getLayerGeoJson(@PathVariable("polygonId") String polygonId) {
         log.info("Fetching GeoJSON (single Feature) for polygonId: {}", polygonId);
         PolygonDto polygonDto = polygonService.getById(polygonId);
@@ -82,7 +81,7 @@ public class OpenApiLayerController {
      */
     @GetMapping(
             value = "/{polygonId}/feature-collection",
-            produces = MediaType.APPLICATION_JSON_VALUE // or "application/geo+json" if desired
+            produces = "application/geo+json"
     )
     public ResponseEntity<Map<String, Object>> getPolygonAsFeatureCollection(
             @PathVariable("polygonId") String polygonId
