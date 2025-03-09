@@ -1,8 +1,38 @@
-// src/app/(site)/login/page.tsx
 "use client";
 
-import React, {useState} from "react";
-import {useRouter} from "next/navigation";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+
+/**
+ * Reusable function to perform the sign-in request.
+ * It sends the username and password to the backend,
+ * and if successful, sets the JWT cookie.
+ */
+async function signInRequest(username: string, password: string): Promise<void> {
+    const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include", // ensures cookies are included
+            body: JSON.stringify({ username, password }),
+        }
+    );
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Sign-in failed.");
+    }
+
+    const data = await response.json();
+    if (!data.token) {
+        throw new Error("No token returned from server");
+    }
+
+    const maxAge = 24 * 60 * 60; // 1 day in seconds
+    // Set cookie with necessary flags: SameSite=None; Secure for HTTPS environments.
+    document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=None; Secure;`;
+}
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
@@ -15,41 +45,16 @@ export default function LoginPage() {
         setError(null);
 
         try {
-            // Call your backend sign-in endpoint.
-            // Ensure NEXT_PUBLIC_BACKEND_URL is set correctly (e.g., "http://localhost:8080")
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
-                {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({username, password}),
-                }
-            );
+            // First sign-in attempt
+            await signInRequest(username, password);
 
-            console.log("response", response);
+            // Refresh the page so that Next.js middleware picks up the newly set cookie
+            router.refresh();
 
-            if (!response.ok) {
-                console.error("Sign-in failed:", response);
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.message || "Sign-in failed.");
-            }
-
-            const data = await response.json();
-            if (!data.token) {
-                console.error("No token returned from server:", data);
-                throw new Error("No token returned from server");
-            }
-
-            // ALTERNATIVE Bearer token logic: Store token in localStorage
-            // localStorage.setItem("jwtToken", data.token);
-
-            // ORIGINAL HTTPOnly cookie logic (for reference):
-            const maxAge = 24 * 60 * 60; // 1 day in seconds
-            // document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=Strict;`;
-            document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=None; Secure;`;
+            // Second sign-in attempt to ensure the token is properly recognized
+            await signInRequest(username, password);
 
             console.log("Sign-in successful! Redirecting to /map...");
-            // Redirect to the homepage (or any other protected route)
             router.push("/map");
         } catch (err: any) {
             setError(err.message);

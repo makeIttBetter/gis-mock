@@ -11,7 +11,9 @@ export async function middleware(request: NextRequest) {
     const {pathname} = request.nextUrl;
     console.log("Middleware processing:", pathname);
 
+    // 1) Skip auth checks for home page "/", plus these other paths:
     if (
+        pathname === "/" ||
         pathname.startsWith("/_next") ||
         pathname.startsWith("/favicon.ico") ||
         pathname.startsWith("/login") ||
@@ -21,6 +23,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // 2) Otherwise, verify the token
     const cookieHeader = request.headers.get("cookie") || "";
     console.log("Cookie header:", cookieHeader);
 
