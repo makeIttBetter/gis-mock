@@ -1,8 +1,9 @@
-package com.example.realestate.controller;
+package com.example.realestate.controller.openapi;
 
 import com.example.realestate.dto.model.CoordinateDto;
 import com.example.realestate.dto.model.PolygonDto;
 import com.example.realestate.service.PolygonService;
+import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This controller serves GeoJSON layer data for a given polygon, matching the same JSON structure
@@ -25,9 +29,11 @@ import java.util.*;
 public class OpenApiLayerController {
 
     private final PolygonService polygonService;
+    private final RealEstateService realEstateService;
 
-    public OpenApiLayerController(PolygonService polygonService) {
+    public OpenApiLayerController(PolygonService polygonService, RealEstateService realEstateService) {
         this.polygonService = polygonService;
+        this.realEstateService = realEstateService;
     }
 
     /**
@@ -54,6 +60,7 @@ public class OpenApiLayerController {
 
     /**
      * Get GeoJSON data for a single polygon in the same structure as /api/gis/mock-polygon.
+     *
      * @param polygonId The ID of the polygon to fetch.
      * @return A FeatureCollection with a single Polygon Feature.
      */
@@ -106,6 +113,7 @@ public class OpenApiLayerController {
 
     /**
      * Get GeoJSON data for a polygon's vertices (points) in the same structure as /api/gis/mock-dots.
+     *
      * @param polygonId The ID of the polygon to fetch.
      * @return A FeatureCollection of point Features (one for each vertex).
      */
@@ -122,10 +130,16 @@ public class OpenApiLayerController {
             return ResponseEntity.notFound().build();
         }
 
+        List<CoordinateDto> attachedRealEstateCoordinates =
+                realEstateService.getAttachedRealEstateMapDataByPolygonId(polygonId)
+                        .stream().map(re -> new CoordinateDto(re.getLatitude(), re.getLongitude()))
+                        .toList();
+
+
         // Build a list of Features, one Point per vertex with rounded coordinates
         List<Map<String, Object>> features = new ArrayList<>();
         int index = 1;
-        for (CoordinateDto coord : polygonDto.getCoordinates()) {
+        for (CoordinateDto coord : attachedRealEstateCoordinates) {
             Map<String, Object> feature = new HashMap<>();
             feature.put("type", "Feature");
 
