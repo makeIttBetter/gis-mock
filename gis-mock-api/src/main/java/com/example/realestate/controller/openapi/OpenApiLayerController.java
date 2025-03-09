@@ -70,7 +70,7 @@ public class OpenApiLayerController {
 
         // properties (similar to GisController)
         Map<String, Object> properties = new HashMap<>();
-        properties.put("OBJECTID", 1);
+//        properties.put("OBJECTID", 1);
         properties.put("name", polygonDto.getName() != null ? polygonDto.getName() : "Polygon " + polygonId);
         feature.put("properties", properties);
 
@@ -118,7 +118,7 @@ public class OpenApiLayerController {
             Map<String, Object> properties = new HashMap<>();
             properties.put("OBJECTID", index);
             properties.put("name", "Vertex " + index);
-            properties.put("polygonId", polygonDto.getId());
+//            properties.put("polygonId", polygonDto.getId());
             feature.put("properties", properties);
 
             features.add(feature);
