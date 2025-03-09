@@ -1,6 +1,5 @@
-package com.example.realestate.controller;
+package org.example;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -9,15 +8,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/gis")
 public class GisController {
 
-    @GetMapping("/mock-dots")
+    private static int idCounter = 1;
+
+    @GetMapping(value = "/mock-dots", produces = "application/geo+json")
     public Map<String, Object> getMockDots() {
-        log.info("GET /api/gis/mock-dots");
-        // Mock GeoJSON data
+        // (Existing endpoint that returns point features)
         Map<String, Object> geoJson = new HashMap<>();
         geoJson.put("type", "FeatureCollection");
 
@@ -32,20 +31,59 @@ public class GisController {
     }
 
     private Map<String, Object> createFeature(double longitude, double latitude) {
-        log.info("Creating feature at {}, {}", longitude, latitude);
         Map<String, Object> feature = new HashMap<>();
         feature.put("type", "Feature");
 
         Map<String, Object> geometry = new HashMap<>();
         geometry.put("type", "Point");
         geometry.put("coordinates", List.of(longitude, latitude));
-
         feature.put("geometry", geometry);
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("name", "Mock Point");
-
+        // Add a unique identifier
+        properties.put("OBJECTID", idCounter++);
         feature.put("properties", properties);
+        return feature;
+    }
+
+
+    // New endpoint that returns a polygon as a FeatureCollection
+    @GetMapping(value = "/mock-polygon", produces = "application/geo+json")
+    public Map<String, Object> getMockPolygon() {
+        Map<String, Object> featureCollection = new HashMap<>();
+        featureCollection.put("type", "FeatureCollection");
+        // Create a list with a single polygon feature
+        List<Map<String, Object>> features = List.of(createPolygonFeature());
+        featureCollection.put("features", features);
+        return featureCollection;
+    }
+
+    // Helper method to create a polygon feature
+    private Map<String, Object> createPolygonFeature() {
+        Map<String, Object> feature = new HashMap<>();
+        feature.put("type", "Feature");
+
+        // Define the polygon geometry as a rectangle (with first and last coordinate the same)
+        Map<String, Object> geometry = new HashMap<>();
+        geometry.put("type", "Polygon");
+        List<List<List<Double>>> coordinates = List.of(
+                List.of(
+                        List.of(-111.70, 40.30),
+                        List.of(-111.68, 40.30),
+                        List.of(-111.68, 40.32),
+                        List.of(-111.70, 40.32),
+                        List.of(-111.70, 40.30)  // Closes the polygon
+                )
+        );
+        geometry.put("coordinates", coordinates);
+        feature.put("geometry", geometry);
+
+        // Add any properties you need
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("name", "Mock Polygon");
+        feature.put("properties", properties);
+
         return feature;
     }
 }
