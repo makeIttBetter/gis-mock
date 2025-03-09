@@ -53,8 +53,10 @@ public class OpenApiLayerController {
      * @return A list containing the rounded longitude and latitude.
      */
     private List<Double> roundCoordinates(CoordinateDto coord) {
-        double roundedLng = roundCoordinate(coord.getLng());
-        double roundedLat = roundCoordinate(coord.getLat());
+//        double roundedLng = roundCoordinate(coord.getLng());
+//        double roundedLat = roundCoordinate(coord.getLat());
+        double roundedLng = coord.getLng();
+        double roundedLat = coord.getLat();
         return List.of(roundedLng, roundedLat);
     }
 
