@@ -39,7 +39,7 @@ public class PolygonController {
     @GetMapping("/{id}")
     public ResponseEntity<PolygonDto> getPolygon(@PathVariable(name = "id") String id) {
         log.info("GET /api/polygons/{}", id);
-        PolygonDto polygon = polygonService.getById(id);
+        PolygonDto polygon = polygonService.getByIdForCurrentUser(id);
         if (polygon == null) {
             return ResponseEntity.notFound().build();
         }
@@ -90,7 +90,7 @@ public class PolygonController {
         log.info("GET /api/polygons/{}/export/csv", polygonId);
 
         // 1) Get the polygon. If not found, return 404
-        PolygonDto polygonDto = polygonService.getById(polygonId);
+        PolygonDto polygonDto = polygonService.getByIdForCurrentUser(polygonId);
         if (polygonDto == null) {
             log.warn("Polygon not found or not authorized for polygonId={}", polygonId);
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Polygon not found");

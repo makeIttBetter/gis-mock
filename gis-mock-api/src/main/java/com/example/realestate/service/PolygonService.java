@@ -118,8 +118,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         return toDtoConverter.convert(saved);
     }
 
-    @Override
-    public PolygonDto getById(String id) {
+    public PolygonDto getByIdForCurrentUser(String id) {
         log.info("Finding polygon by ID: {}", id);
         String currentUserId = securityService.getCurrentUserId();
         if (currentUserId == null) {
@@ -129,6 +128,17 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         Polygon polygon = polygonRepository.findByIdAndUserId(id, currentUserId).orElse(null);
         if (polygon == null) {
             log.warn("Polygon not found or does not belong to user: {}", id);
+            return null;
+        }
+        return toDtoConverter.convert(polygon);
+    }
+
+    @Override
+    public PolygonDto getById(String id) {
+        log.info("Finding polygon by ID: {}", id);
+        Polygon polygon = polygonRepository.findById(id).orElse(null);
+        if (polygon == null) {
+            log.warn("Polygon not found: {}", id);
             return null;
         }
         return toDtoConverter.convert(polygon);
