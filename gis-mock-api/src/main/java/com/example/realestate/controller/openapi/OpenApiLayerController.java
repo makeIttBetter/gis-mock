@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 /**
@@ -26,6 +28,28 @@ public class OpenApiLayerController {
 
     public OpenApiLayerController(PolygonService polygonService) {
         this.polygonService = polygonService;
+    }
+
+    /**
+     * Rounds a single double value to 6 decimal places.
+     *
+     * @param value The original coordinate value.
+     * @return The rounded value.
+     */
+    private double roundCoordinate(double value) {
+        return new BigDecimal(value).setScale(6, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    /**
+     * Rounds the longitude and latitude of the given CoordinateDto and returns them as a list.
+     *
+     * @param coord The coordinate data.
+     * @return A list containing the rounded longitude and latitude.
+     */
+    private List<Double> roundCoordinates(CoordinateDto coord) {
+        double roundedLng = roundCoordinate(coord.getLng());
+        double roundedLat = roundCoordinate(coord.getLat());
+        return List.of(roundedLng, roundedLat);
     }
 
     /**
@@ -46,11 +70,10 @@ public class OpenApiLayerController {
             return ResponseEntity.notFound().build();
         }
 
-        // Build the outer ring for the polygon
+        // Build the outer ring for the polygon with rounded coordinates
         List<List<Double>> ring = new ArrayList<>();
         for (CoordinateDto coord : polygonDto.getCoordinates()) {
-            // [longitude, latitude]
-            ring.add(List.of(coord.getLng(), coord.getLat()));
+            ring.add(roundCoordinates(coord));
         }
         // Ensure the ring is closed by repeating the first coordinate at the end
         if (!ring.isEmpty() && !ring.get(0).equals(ring.get(ring.size() - 1))) {
@@ -70,7 +93,6 @@ public class OpenApiLayerController {
 
         // properties (similar to GisController)
         Map<String, Object> properties = new HashMap<>();
-//        properties.put("OBJECTID", 1);
         properties.put("name", polygonDto.getName() != null ? polygonDto.getName() : "Polygon " + polygonId);
         feature.put("properties", properties);
 
@@ -100,25 +122,24 @@ public class OpenApiLayerController {
             return ResponseEntity.notFound().build();
         }
 
-        // Build a list of Features, one Point per vertex
+        // Build a list of Features, one Point per vertex with rounded coordinates
         List<Map<String, Object>> features = new ArrayList<>();
         int index = 1;
         for (CoordinateDto coord : polygonDto.getCoordinates()) {
             Map<String, Object> feature = new HashMap<>();
             feature.put("type", "Feature");
 
-            // geometry for a Point
+            // Geometry for a Point
             Map<String, Object> geometry = new HashMap<>();
             geometry.put("type", "Point");
-            // coordinates -> [longitude, latitude]
-            geometry.put("coordinates", List.of(coord.getLng(), coord.getLat()));
+            // coordinates -> [longitude, latitude] with rounded values
+            geometry.put("coordinates", roundCoordinates(coord));
             feature.put("geometry", geometry);
 
             // properties
             Map<String, Object> properties = new HashMap<>();
             properties.put("OBJECTID", index);
             properties.put("name", "Vertex " + index);
-//            properties.put("polygonId", polygonDto.getId());
             feature.put("properties", properties);
 
             features.add(feature);
