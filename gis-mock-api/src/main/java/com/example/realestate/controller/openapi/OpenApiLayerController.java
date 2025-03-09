@@ -34,7 +34,7 @@ public class OpenApiLayerController {
      */
     @GetMapping(
             value = "/{polygonId}/polygon-coordinates",
-            produces = "application/json"
+            produces = "application/geo+json"
     )
     public ResponseEntity<Map<String, Object>> getPolygonCoordinates(
             @PathVariable("polygonId") String polygonId
@@ -90,7 +90,7 @@ public class OpenApiLayerController {
      */
     @GetMapping(
             value = "/{polygonId}/data-set",
-            produces = "application/json"
+            produces = "application/geo+json"
     )
     public ResponseEntity<Map<String, Object>> getPolygonDataSet(
             @PathVariable("polygonId") String polygonId
