@@ -1,4 +1,4 @@
-package com.example.realestate.controller.openapi;
+package com.example.realestate.controller;
 
 import com.example.realestate.dto.model.CoordinateDto;
 import com.example.realestate.dto.model.PolygonDto;
