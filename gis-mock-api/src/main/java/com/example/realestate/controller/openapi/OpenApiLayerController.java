@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.*;
 
 /**
- * This controller serves ArcGIS JSON layer data for a given polygon.
+ * This controller serves GeoJSON layer data for a given polygon, matching the same JSON structure
+ * that the GisController produces, so ArcGIS can read it as a feature layer.
  * Base path: /api/openApi/layers
  */
 @Slf4j
@@ -28,9 +29,9 @@ public class OpenApiLayerController {
     }
 
     /**
-     * Get ArcGIS JSON data for a single polygon.
+     * Get GeoJSON data for a single polygon in the same structure as /api/gis/mock-polygon.
      * @param polygonId The ID of the polygon to fetch.
-     * @return ArcGIS JSON data for the polygon.
+     * @return A FeatureCollection with a single Polygon Feature.
      */
     @GetMapping(
             value = "/{polygonId}/polygon-coordinates",
@@ -45,48 +46,46 @@ public class OpenApiLayerController {
             return ResponseEntity.notFound().build();
         }
 
-        // Convert coordinates to ArcGIS Polygon rings format
+        // Build the outer ring for the polygon
         List<List<Double>> ring = new ArrayList<>();
         for (CoordinateDto coord : polygonDto.getCoordinates()) {
+            // [longitude, latitude]
             ring.add(List.of(coord.getLng(), coord.getLat()));
         }
-        // Ensure the polygon is closed (first and last points are the same)
+        // Ensure the ring is closed by repeating the first coordinate at the end
         if (!ring.isEmpty() && !ring.get(0).equals(ring.get(ring.size() - 1))) {
             ring.add(new ArrayList<>(ring.get(0)));
         }
 
-        // Create a single Feature for the polygon in ArcGIS JSON format
+        // Build the GeoJSON Feature for the polygon
         Map<String, Object> feature = new HashMap<>();
+        feature.put("type", "Feature");
 
-        // Build attributes (using OBJECTID as 1 for a single polygon)
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("OBJECTID", 1);
-        attributes.put("name", polygonDto.getName() != null ? polygonDto.getName() : "Polygon " + polygonId);
-        feature.put("attributes", attributes);
-
-        // Build geometry with rings (ArcGIS requires "rings" for polygons)
+        // Polygon geometry
         Map<String, Object> geometry = new HashMap<>();
-        geometry.put("rings", List.of(ring));
+        geometry.put("type", "Polygon");
+        // coordinates -> [ [ ring ] ]
+        geometry.put("coordinates", List.of(ring));
         feature.put("geometry", geometry);
 
-        // Build the Feature Collection with extra ArcGIS metadata
+        // properties (similar to GisController)
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("OBJECTID", 1);
+        properties.put("name", polygonDto.getName() != null ? polygonDto.getName() : "Polygon " + polygonId);
+        feature.put("properties", properties);
+
+        // Wrap in a FeatureCollection
         Map<String, Object> featureCollection = new HashMap<>();
-        featureCollection.put("objectIdField", "OBJECTID");
-        featureCollection.put("geometryType", "esriGeometryPolygon");
-        featureCollection.put("spatialReference", Map.of("wkid", 4326));
-        featureCollection.put("fields", List.of(
-                Map.of("name", "OBJECTID", "type", "esriFieldTypeOID"),
-                Map.of("name", "name", "type", "esriFieldTypeString")
-        ));
+        featureCollection.put("type", "FeatureCollection");
         featureCollection.put("features", List.of(feature));
 
         return ResponseEntity.ok(featureCollection);
     }
 
     /**
-     * Get ArcGIS JSON data for a single polygon's vertices (point features).
+     * Get GeoJSON data for a polygon's vertices (points) in the same structure as /api/gis/mock-dots.
      * @param polygonId The ID of the polygon to fetch.
-     * @return ArcGIS JSON data for the polygon's vertices.
+     * @return A FeatureCollection of point Features (one for each vertex).
      */
     @GetMapping(
             value = "/{polygonId}/data-set",
@@ -101,39 +100,34 @@ public class OpenApiLayerController {
             return ResponseEntity.notFound().build();
         }
 
-        // Create list of point features using ArcGIS JSON format
+        // Build a list of Features, one Point per vertex
         List<Map<String, Object>> features = new ArrayList<>();
         int index = 1;
         for (CoordinateDto coord : polygonDto.getCoordinates()) {
             Map<String, Object> feature = new HashMap<>();
+            feature.put("type", "Feature");
 
-            // Build attributes for the point feature
-            Map<String, Object> attributes = new HashMap<>();
-            attributes.put("OBJECTID", index); // Use index as OBJECTID
-            attributes.put("name", "Vertex " + index);
-            attributes.put("polygonId", polygonDto.getId());
-            feature.put("attributes", attributes);
-
-            // Build geometry for a point (x: longitude, y: latitude)
+            // geometry for a Point
             Map<String, Object> geometry = new HashMap<>();
-            geometry.put("x", coord.getLng());
-            geometry.put("y", coord.getLat());
+            geometry.put("type", "Point");
+            // coordinates -> [longitude, latitude]
+            geometry.put("coordinates", List.of(coord.getLng(), coord.getLat()));
             feature.put("geometry", geometry);
+
+            // properties
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("OBJECTID", index);
+            properties.put("name", "Vertex " + index);
+            properties.put("polygonId", polygonDto.getId());
+            feature.put("properties", properties);
 
             features.add(feature);
             index++;
         }
 
-        // Build the Feature Collection for point features with extra ArcGIS metadata
+        // Wrap in a FeatureCollection
         Map<String, Object> featureCollection = new HashMap<>();
-        featureCollection.put("objectIdField", "OBJECTID");
-        featureCollection.put("geometryType", "esriGeometryPoint");
-        featureCollection.put("spatialReference", Map.of("wkid", 4326));
-        featureCollection.put("fields", List.of(
-                Map.of("name", "OBJECTID", "type", "esriFieldTypeOID"),
-                Map.of("name", "name", "type", "esriFieldTypeString"),
-                Map.of("name", "polygonId", "type", "esriFieldTypeString")
-        ));
+        featureCollection.put("type", "FeatureCollection");
         featureCollection.put("features", features);
 
         return ResponseEntity.ok(featureCollection);
