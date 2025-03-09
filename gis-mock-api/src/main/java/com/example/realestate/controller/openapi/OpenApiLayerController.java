@@ -28,99 +28,103 @@ public class OpenApiLayerController {
     }
 
     /**
-     * GET /openApi/layers/{polygonId}
-     * Returns the polygon data in single "Feature" GeoJSON format.
-     *
-     * @param polygonId the ID of the polygon
-     * @return GeoJSON Feature representing the polygon
-     */
-    @GetMapping(value = "/{polygonId}", produces = "application/geo+json")
-    public ResponseEntity<Map<String, Object>> getLayerGeoJson(@PathVariable("polygonId") String polygonId) {
-        log.info("Fetching GeoJSON (single Feature) for polygonId: {}", polygonId);
-        PolygonDto polygonDto = polygonService.getById(polygonId);
-        if (polygonDto == null) {
-            log.warn("Polygon with ID {} not found", polygonId);
-            return ResponseEntity.notFound().build();
-        }
-
-        // Convert the polygon's coordinates into a GeoJSON ring (array of [lng, lat])
-        List<List<Double>> linearRing = new ArrayList<>();
-        for (CoordinateDto coord : polygonDto.getCoordinates()) {
-            // In GeoJSON: [longitude, latitude]
-            linearRing.add(List.of(coord.getLng(), coord.getLat()));
-        }
-        // Ensure ring is closed
-        if (!linearRing.isEmpty() && !linearRing.get(0).equals(linearRing.get(linearRing.size() - 1))) {
-            linearRing.add(new ArrayList<>(linearRing.get(0)));
-        }
-        List<List<List<Double>>> coordinates = List.of(linearRing);
-
-        // Build the single Feature
-        Map<String, Object> geoJson = new LinkedHashMap<>();
-        geoJson.put("type", "Feature");
-
-        Map<String, Object> geometry = new LinkedHashMap<>();
-        geometry.put("type", "Polygon");
-        geometry.put("coordinates", coordinates);
-        geoJson.put("geometry", geometry);
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("id", polygonDto.getId());
-        properties.put("name", polygonDto.getName());
-        // add more properties if needed
-        geoJson.put("properties", properties);
-
-        return ResponseEntity.ok(geoJson);
-    }
-
-    /**
-     * NEW ENDPOINT: Returns the polygon data wrapped in a FeatureCollection,
-     * with exactly one Feature inside "features".
-     * Example path: GET /openApi/layers/{polygonId}/feature-collection
-     * Produces: application/geo+json
+     * Get GeoJSON data for a single polygon.
+     * @param polygonId The ID of the polygon to fetch.
+     * @return GeoJSON data for the polygon.
      */
     @GetMapping(
-            value = "/{polygonId}/feature-collection",
+            value = "/{polygonId}/polygon-coordinates",
             produces = "application/geo+json"
     )
-    public ResponseEntity<Map<String, Object>> getPolygonAsFeatureCollection(
+    public ResponseEntity<Map<String, Object>> getPolygonCoordinates(
             @PathVariable("polygonId") String polygonId
     ) {
-        log.info("Fetching GeoJSON as FeatureCollection for polygonId={}", polygonId);
+        // Fetch the polygon data
         PolygonDto polygonDto = polygonService.getById(polygonId);
         if (polygonDto == null) {
-            log.warn("Polygon with ID {} not found", polygonId);
             return ResponseEntity.notFound().build();
         }
 
-        // 1) Convert polygon coords => ring
+        // Convert coordinates to GeoJSON Polygon format
         List<List<Double>> linearRing = new ArrayList<>();
         for (CoordinateDto coord : polygonDto.getCoordinates()) {
             linearRing.add(List.of(coord.getLng(), coord.getLat()));
         }
+        // Ensure the polygon is closed (first and last points are the same)
         if (!linearRing.isEmpty() && !linearRing.get(0).equals(linearRing.get(linearRing.size() - 1))) {
             linearRing.add(new ArrayList<>(linearRing.get(0)));
         }
         List<List<List<Double>>> coordinates = List.of(linearRing);
 
-        // 2) Create single Feature object
-        Map<String, Object> singleFeature = new HashMap<>();
-        singleFeature.put("type", "Feature");
+        // Create a single Polygon Feature
+        Map<String, Object> feature = new HashMap<>();
+        feature.put("type", "Feature");
 
+        // Define the Polygon geometry
         Map<String, Object> geometry = new HashMap<>();
         geometry.put("type", "Polygon");
         geometry.put("coordinates", coordinates);
-        singleFeature.put("geometry", geometry);
+        feature.put("geometry", geometry);
 
+        // Add properties (customize as needed)
         Map<String, Object> properties = new HashMap<>();
         properties.put("id", polygonDto.getId());
-        properties.put("name", polygonDto.getName());
-        singleFeature.put("properties", properties);
+        properties.put("name", polygonDto.getName() != null ? polygonDto.getName() : "Polygon " + polygonId);
+        feature.put("properties", properties);
 
-        // 3) Wrap into a FeatureCollection
+        // Wrap in a FeatureCollection
         Map<String, Object> featureCollection = new HashMap<>();
         featureCollection.put("type", "FeatureCollection");
-        featureCollection.put("features", List.of(singleFeature));
+        featureCollection.put("features", List.of(feature));
+
+        return ResponseEntity.ok(featureCollection);
+    }
+
+    /**
+     * Get GeoJSON data for a single polygon's object locations.
+     * @param polygonId The ID of the polygon to fetch.
+     * @return GeoJSON data for the polygon's vertices.
+     */
+    @GetMapping(
+            value = "/{polygonId}/data-set",
+            produces = "application/geo+json"
+    )
+    public ResponseEntity<Map<String, Object>> getPolygonDataSet(
+            @PathVariable("polygonId") String polygonId
+    ) {
+        // Fetch the polygon data
+        PolygonDto polygonDto = polygonService.getById(polygonId);
+        if (polygonDto == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Create list of point features
+        List<Map<String, Object>> features = new ArrayList<>();
+        int index = 1;
+        for (CoordinateDto coord : polygonDto.getCoordinates()) {
+            // Create a single Point Feature
+            Map<String, Object> feature = new HashMap<>();
+            feature.put("type", "Feature");
+
+            // Define the Point geometry
+            Map<String, Object> geometry = new HashMap<>();
+            geometry.put("type", "Point");
+            geometry.put("coordinates", List.of(coord.getLng(), coord.getLat()));
+            feature.put("geometry", geometry);
+
+            // Add properties (customize as needed)
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("name", "Vertex " + index++);
+            properties.put("polygonId", polygonDto.getId());
+            feature.put("properties", properties);
+
+            features.add(feature);
+        }
+
+        // Wrap in a FeatureCollection
+        Map<String, Object> featureCollection = new HashMap<>();
+        featureCollection.put("type", "FeatureCollection");
+        featureCollection.put("features", features);
 
         return ResponseEntity.ok(featureCollection);
     }
