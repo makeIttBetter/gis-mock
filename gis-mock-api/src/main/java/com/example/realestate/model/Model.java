@@ -2,10 +2,12 @@
 package com.example.realestate.model;
 
 import com.example.realestate.annotations.ExportField;
+import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @MappedSuperclass
+@SuperBuilder(toBuilder = true)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -30,10 +33,12 @@ public abstract class Model implements Serializable {
 
     @ExportField(fieldName = "created_at", displayName = "Created at")
     @CreatedDate
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @ExportField(fieldName = "updated_at", displayName = "Updated at")
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist

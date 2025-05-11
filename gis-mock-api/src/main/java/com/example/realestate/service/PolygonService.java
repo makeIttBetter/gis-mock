@@ -57,7 +57,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     }
 
     @Override
-    @Transactional(readOnly = false)
+    @Transactional
     public PolygonDto create(PolygonDto polygonDto) {
         log.info("Creating polygon from PolygonDto: {}", polygonDto);
         // Convert polygonDto -> PolygonCreateDto
@@ -72,7 +72,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     /**
      * Overloaded create method that takes PolygonCreateDto directly.
      */
-    @Transactional(readOnly = false)
+    @Transactional
     public PolygonDto create(PolygonCreateDto polygonCreateDto) {
         log.info("Creating polygon with: {}", polygonCreateDto);
 
@@ -90,11 +90,11 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         Polygon saved = polygonRepository.save(polygon);
 
         // 4) Create ArcGIS layers and set arcgis IDs
-        String dataUrl = "https://mytestapp.online/api/openApi/layers/" + saved.getId() + "/data-set";
+        String dataUrl = layersUrl + saved.getId() + "/data-set";
         String arcgisLayerId = arcgisLayerService.createLayer(saved.getName() + " (DataSet)", dataUrl);
         saved.setArcgisLayerId(arcgisLayerId);
 
-        String polygonDataUrl = "https://mytestapp.online/api/openApi/layers/" + saved.getId() + "/polygon-coordinates";
+        String polygonDataUrl = layersUrl + saved.getId() + "/polygon-coordinates";
         String arcgisPolygonId = arcgisLayerService.createLayer(saved.getName() + " (Polygon)", polygonDataUrl);
         saved.setArcgisPolygonId(arcgisPolygonId);
 
@@ -159,7 +159,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     }
 
     @Override
-    @Transactional(readOnly = false)
+    @Transactional
     public PolygonDto update(String id, PolygonDto updatedDto) {
         log.info("Updating polygon with ID: {}", id);
         String currentUserId = securityService.getCurrentUserId();

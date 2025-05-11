@@ -4,11 +4,21 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { PolygonDTO } from "@/interfaces/PolygonDTO";
 import { RealEstate } from "@/interfaces/RealEstate";
-import { fetchPolygons, deletePolygon, exportPolygonCsv } from "@/lib/polygonApi";
+import {
+    fetchPolygons,
+    deletePolygon,
+    exportPolygonCsv,
+} from "@/lib/polygonApi";
 import { fetchAttachedRealEstate } from "@/lib/realEstateApi";
+import {
+    checkGoogleAuthStatus,
+    startGoogleOAuthFlow,
+    exportPolygonToGoogleSheets,
+} from "@/lib/googleApi";
 
 /**
- * Renders a list of saved polygons with "Expand," "Edit," "Delete," and "Export CSV" actions.
+ * Shows a list of polygons.
+ * Includes "Connect with Google" or "Export to Google Sheets" button.
  */
 export default function PolygonListPanel() {
     const [polygons, setPolygons] = useState<PolygonDTO[]>([]);
@@ -17,6 +27,9 @@ export default function PolygonListPanel() {
         [polygonId: string]: RealEstate[];
     }>({});
     const [exportLoadingId, setExportLoadingId] = useState<string | null>(null);
+
+    // Track if Google token is valid
+    const [googleTokenValid, setGoogleTokenValid] = useState<boolean>(false);
 
     async function loadData() {
         try {
@@ -27,10 +40,17 @@ export default function PolygonListPanel() {
         }
     }
 
+    async function checkGoogleToken() {
+        const isValid = await checkGoogleAuthStatus();
+        setGoogleTokenValid(isValid);
+    }
+
     useEffect(() => {
         loadData();
+        checkGoogleToken();
     }, []);
 
+    // Re-fetch polygons when new ones are created or deleted
     useEffect(() => {
         function handlePolygonCreated() {
             loadData();
@@ -40,6 +60,7 @@ export default function PolygonListPanel() {
         }
         window.addEventListener("polygonCreated", handlePolygonCreated);
         window.addEventListener("polygonDeleted", handlePolygonDeleted);
+
         return () => {
             window.removeEventListener("polygonCreated", handlePolygonCreated);
             window.removeEventListener("polygonDeleted", handlePolygonDeleted);
@@ -52,6 +73,8 @@ export default function PolygonListPanel() {
             return;
         }
         setExpandedPolygonId(polygon.id);
+
+        // Load real estate objects only if we haven't yet
         if (!expandedPolygonRealEstates[polygon.id] && polygon.realEstateObjects.length > 0) {
             try {
                 const reList = await fetchAttachedRealEstate(polygon.realEstateObjects);
@@ -66,9 +89,7 @@ export default function PolygonListPanel() {
     }
 
     async function handleDelete(id: string) {
-        if (
-            window.confirm("Are you sure you want to delete this polygon and all its relationships?")
-        ) {
+        if (window.confirm("Are you sure you want to delete this polygon?")) {
             try {
                 await deletePolygon(id);
                 alert("Polygon deleted");
@@ -107,12 +128,35 @@ export default function PolygonListPanel() {
         }
     }
 
+    function handleConnectGoogle() {
+        // Opens a popup to start the OAuth flow
+        startGoogleOAuthFlow();
+        // Re-check after some delay or instruct the user to refresh
+        setTimeout(() => {
+            checkGoogleToken();
+        }, 3000);
+    }
+
+    async function handleExportToSheets(polygonId: string) {
+        if (!window.confirm("Export this polygon's data to Google Sheets?")) return;
+        try {
+            setExportLoadingId(polygonId);
+            await exportPolygonToGoogleSheets(polygonId);
+        } catch (error) {
+            console.error("Export to Google Sheets failed:", error);
+            alert("Failed to export to Google Sheets");
+        } finally {
+            setExportLoadingId(null);
+        }
+    }
+
     return (
         <div className="p-4">
             <h1 className="text-xl font-bold mb-4">Saved Polygons</h1>
             {polygons.map((polygon) => {
                 const isExpanded = expandedPolygonId === polygon.id;
                 const attachedReList = expandedPolygonRealEstates[polygon.id] || [];
+                const isLoadingExport = exportLoadingId === polygon.id;
 
                 return (
                     <div key={polygon.id} className="bg-white shadow p-4 mb-4 rounded border">
@@ -125,6 +169,7 @@ export default function PolygonListPanel() {
                                 <p>{`Objects in Polygon: ${polygon.realEstateObjects.length}`}</p>
                             </div>
                             <div className="flex gap-2">
+                                {/* Expand/Collapse */}
                                 <button
                                     onClick={() => handleToggleExpand(polygon)}
                                     className="px-3 py-1 bg-blue-500 text-white rounded"
@@ -132,6 +177,7 @@ export default function PolygonListPanel() {
                                     {isExpanded ? "Collapse" : "Expand"}
                                 </button>
 
+                                {/* Edit link */}
                                 <Link
                                     href={`/polygons/${polygon.id}/edit`}
                                     className="px-3 py-1 bg-green-500 text-white rounded"
@@ -139,6 +185,7 @@ export default function PolygonListPanel() {
                                     Edit ↗
                                 </Link>
 
+                                {/* Delete */}
                                 <button
                                     onClick={() => handleDelete(polygon.id)}
                                     className="px-3 py-1 bg-red-500 text-white rounded"
@@ -146,16 +193,36 @@ export default function PolygonListPanel() {
                                     Delete
                                 </button>
 
+                                {/* Export CSV */}
                                 <button
                                     onClick={() => handleExportCsv(polygon)}
                                     className="px-3 py-1 bg-purple-600 text-white rounded flex items-center gap-2"
-                                    disabled={exportLoadingId === polygon.id}
+                                    disabled={isLoadingExport}
                                 >
-                                    {exportLoadingId === polygon.id ? "Exporting..." : "Export to CSV"}
+                                    {isLoadingExport ? "Exporting..." : "Export CSV"}
                                 </button>
+
+                                {/* Connect or Export to Google Sheets */}
+                                {!googleTokenValid ? (
+                                    <button
+                                        onClick={handleConnectGoogle}
+                                        className="px-3 py-1 bg-yellow-500 text-white rounded"
+                                    >
+                                        Connect with Google
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleExportToSheets(polygon.id)}
+                                        className="px-3 py-1 bg-yellow-600 text-white rounded"
+                                        disabled={isLoadingExport}
+                                    >
+                                        {isLoadingExport ? "Exporting..." : "Export to Google Sheets"}
+                                    </button>
+                                )}
                             </div>
                         </div>
 
+                        {/* Expanded details */}
                         {isExpanded && (
                             <div className="mt-3 ml-4 border-l pl-4">
                                 <h3 className="font-bold mb-2">Real Estate Objects:</h3>

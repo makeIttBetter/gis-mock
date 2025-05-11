@@ -1,19 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
 
-    <!-- CREATE TABLES -->
+    <!-- existing includes -->
     <include file="liquibase/changelog-v1/create-users-roles.xml"/>
-
     <include file="liquibase/changelog-v1/create-real-estate-table.xml"/>
     <include file="liquibase/changelog-v1/create-polygon-table.xml"/>
     <include file="liquibase/changelog-v1/create-polygon-realestate-table.xml"/>
 
-    <!-- LOAD DATA -->
-<!--    <include file="liquibase/changelog-v1/load-real-estate-data.xml"/>-->
+    <!-- Add the new user_google_oauth_token creation script -->
+    <include file="liquibase/changelog-v1/create-user-google-oauth-token-table.xml"/>
 
-
+    <!-- Optionally load data or other changesets -->
 </databaseChangeLog>

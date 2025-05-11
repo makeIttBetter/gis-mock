@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Represents a role (e.g. "ADMIN", "USER") that can be assigned to a User.
@@ -15,6 +16,7 @@ import lombok.Setter;
 @Table(name = "roles")
 @Getter
 @Setter
+@SuperBuilder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Role extends Model {

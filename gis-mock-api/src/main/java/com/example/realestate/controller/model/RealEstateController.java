@@ -1,10 +1,10 @@
 package com.example.realestate.controller.model;
 
-import com.example.realestate.dto.model.PaginatedResponseDto;
-import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
-import com.example.realestate.dto.model.RealEstateUpdateDto; // << NEW
+import com.example.realestate.dto.model.PaginatedResponseDto;
+import com.example.realestate.dto.model.RealEstateDto;
+import com.example.realestate.dto.model.RealEstateUpdateDto;
 import com.example.realestate.service.PolygonService;
 import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,11 +25,9 @@ import java.util.Map;
 public class RealEstateController {
 
     private final RealEstateService realEstateService;
-    private final PolygonService polygonService;
 
-    public RealEstateController(RealEstateService realEstateService, PolygonService polygonService) {
+    public RealEstateController(RealEstateService realEstateService) {
         this.realEstateService = realEstateService;
-        this.polygonService = polygonService;
     }
 
     /**
