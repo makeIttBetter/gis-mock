@@ -5,7 +5,6 @@ import com.example.realestate.dto.RealEstateMapDto;
 import com.example.realestate.dto.model.PaginatedResponseDto;
 import com.example.realestate.dto.model.RealEstateDto;
 import com.example.realestate.dto.model.RealEstateUpdateDto;
-import com.example.realestate.service.PolygonService;
 import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -59,7 +58,7 @@ public class RealEstateController {
     }
 
     /**
-     * NEW: Returns a paginated list of RealEstateDto (full details).
+     * Returns a paginated list of RealEstateDto (full details).
      */
     @GetMapping("/paginated")
     public ResponseEntity<PaginatedResponseDto<RealEstateDto>> getRealEstatePaginated(
@@ -93,7 +92,7 @@ public class RealEstateController {
     }
 
     // ----------------------------------------------------------------
-    // NEW: Update the RealEstate with the given ID using RealEstateUpdateDto
+    // Update the RealEstate with the given ID using RealEstateUpdateDto
     // ----------------------------------------------------------------
     @PutMapping("/{id}")
     public ResponseEntity<RealEstateDto> updateRealEstate(

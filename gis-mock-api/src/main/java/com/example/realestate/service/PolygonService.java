@@ -17,7 +17,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -60,47 +63,30 @@ public class PolygonService implements CrudService<PolygonDto, String> {
     @Transactional
     public PolygonDto create(PolygonDto polygonDto) {
         log.info("Creating polygon from PolygonDto: {}", polygonDto);
-        // Convert polygonDto -> PolygonCreateDto
         PolygonCreateDto createDto = new PolygonCreateDto();
         createDto.setName(polygonDto.getName());
         createDto.setCoordinates(polygonDto.getCoordinates());
         createDto.setRealEstateIds(polygonDto.getRealEstateObjects());
-
         return create(createDto);
     }
 
-    /**
-     * Overloaded create method that takes PolygonCreateDto directly.
-     */
     @Transactional
     public PolygonDto create(PolygonCreateDto polygonCreateDto) {
         log.info("Creating polygon with: {}", polygonCreateDto);
-
-        // 1) Ensure we have the user ID
         String currentUserId = securityService.getCurrentUserId();
         if (currentUserId == null) {
             throw new RuntimeException("No authenticated user found.");
         }
-
-        // 2) Convert to entity
         Polygon polygon = createConverter.convert(polygonCreateDto);
         polygon.setUserId(currentUserId);
-
-        // 3) Save so we get an ID
         Polygon saved = polygonRepository.save(polygon);
-
-        // 4) Create ArcGIS layers and set arcgis IDs
         String dataUrl = layersUrl + saved.getId() + "/data-set";
         String arcgisLayerId = arcgisLayerService.createLayer(saved.getName() + " (DataSet)", dataUrl);
         saved.setArcgisLayerId(arcgisLayerId);
-
         String polygonDataUrl = layersUrl + saved.getId() + "/polygon-coordinates";
         String arcgisPolygonId = arcgisLayerService.createLayer(saved.getName() + " (Polygon)", polygonDataUrl);
         saved.setArcgisPolygonId(arcgisPolygonId);
-
         saved = polygonRepository.save(saved);
-
-        // 5) Store real estate IDs in JSON field & link table
         List<String> reIds = polygonCreateDto.getRealEstateIds();
         if (reIds != null) {
             try {
@@ -110,11 +96,8 @@ public class PolygonService implements CrudService<PolygonDto, String> {
             } catch (JsonProcessingException e) {
                 log.error("Error JSONifying realEstateIds", e);
             }
-            // Add the link rows
             addPolygonRealEstateLinks(saved.getId(), reIds);
         }
-
-        // 6) Convert to DTO
         return toDtoConverter.convert(saved);
     }
 
@@ -124,7 +107,6 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         if (currentUserId == null) {
             throw new RuntimeException("No authenticated user found.");
         }
-
         Polygon polygon = polygonRepository.findByIdAndUserId(id, currentUserId).orElse(null);
         if (polygon == null) {
             log.warn("Polygon not found or does not belong to user: {}", id);
@@ -151,7 +133,6 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         if (currentUserId == null) {
             throw new RuntimeException("No authenticated user found.");
         }
-
         List<Polygon> polygons = polygonRepository.findAllByUserId(currentUserId);
         return polygons.stream()
                 .map(toDtoConverter::convert)
@@ -166,15 +147,11 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         if (currentUserId == null) {
             throw new RuntimeException("No authenticated user found.");
         }
-
-        // Only fetch polygon if it belongs to current user
         Polygon existing = polygonRepository.findByIdAndUserId(id, currentUserId).orElse(null);
         if (existing == null) {
             log.warn("Polygon not found or not owned by user: {}", id);
             return null;
         }
-
-        // 1) Update basic fields
         existing.setName(updatedDto.getName());
         try {
             String coordsJson = objectMapper.writeValueAsString(updatedDto.getCoordinates());
@@ -182,13 +159,8 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         } catch (JsonProcessingException e) {
             log.error("Error writing coords JSON", e);
         }
-
-        // 2) Update ArcGIS layer names if polygon name changed
         renameArcGisLayers(existing, updatedDto.getName());
-
         existing = polygonRepository.save(existing);
-
-        // 3) Update real estate links
         removePolygonRealEstateLinks(id);
         List<String> newReIds = updatedDto.getRealEstateObjects();
         if (newReIds != null) {
@@ -200,7 +172,6 @@ public class PolygonService implements CrudService<PolygonDto, String> {
             }
             addPolygonRealEstateLinks(id, newReIds);
         }
-
         return toDtoConverter.convert(existing);
     }
 
@@ -212,44 +183,33 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         if (currentUserId == null) {
             throw new RuntimeException("No authenticated user found.");
         }
-
         Polygon polygon = polygonRepository.findByIdAndUserId(id, currentUserId).orElse(null);
         if (polygon == null) {
             log.warn("Polygon not found or not owned by user: {}", id);
             return;
         }
-
-        // ArcGIS delete calls
         if (polygon.getArcgisLayerId() != null) {
             arcgisLayerService.deleteLayer(polygon.getArcgisLayerId());
         }
         if (polygon.getArcgisPolygonId() != null) {
             arcgisLayerService.deleteLayer(polygon.getArcgisPolygonId());
         }
-
-//        // Remove from link table
-//        removePolygonRealEstateLinks(id);
-
-        // Finally remove polygon itself
         polygonRepository.deleteById(id);
     }
 
-    /**
-     * Finds all RealEstate entities attached to a given polygon ID.
-     */
     public List<RealEstate> findAttachedRealEstates(String polygonId) {
         log.info("Finding real estates for polygon ID: {}", polygonId);
         List<PolygonRealEstate> links = polygonRealEstateRepository.findByPolygonId(polygonId);
         List<String> realEstateIds = links.stream()
                 .map(PolygonRealEstate::getRealEstateId)
                 .toList();
-
         return realEstateService.getRealEstateEntitiesByIds(realEstateIds);
     }
 
-    // ----------------------------------------------------------------
-    // HELPER METHODS (private)
-    // ----------------------------------------------------------------
+    public List<String> getRealEstateIdsForPolygon(String polygonId) {
+        List<PolygonRealEstate> links = polygonRealEstateRepository.findByPolygonId(polygonId);
+        return links.stream().map(PolygonRealEstate::getRealEstateId).collect(Collectors.toList());
+    }
 
     private void removePolygonRealEstateLinks(String polygonId) {
         log.info("Removing PolygonRealEstate links for polygonId={}", polygonId);
@@ -258,7 +218,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
 
     private void addPolygonRealEstateLinks(String polygonId, List<String> reIds) {
         log.info("Adding PolygonRealEstate links for polygonId={}, reIds={}", polygonId, reIds);
-        java.util.Set<String> uniqueIds = new java.util.HashSet<>(reIds);
+        Set<String> uniqueIds = new HashSet<>(reIds);
         for (String reId : uniqueIds) {
             PolygonRealEstate link = PolygonRealEstate.builder()
                     .polygonId(polygonId)
@@ -268,12 +228,7 @@ public class PolygonService implements CrudService<PolygonDto, String> {
         }
     }
 
-    /**
-     * ADDED: Renames the ArcGIS layers (dataset + polygon) to reflect the new polygon name.
-     * We add suffixes ("(DataSet)" and "(Polygon)") to differentiate them.
-     */
     private void renameArcGisLayers(Polygon polygon, String newName) {
-        // If the polygon has no ArcGIS IDs, skip
         if (polygon.getArcgisLayerId() != null) {
             arcgisLayerService.updateLayerName(
                     polygon.getArcgisLayerId(),

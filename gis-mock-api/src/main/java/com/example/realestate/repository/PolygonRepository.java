@@ -18,4 +18,5 @@ public interface PolygonRepository extends JpaRepository<Polygon, String> {
      */
     Optional<Polygon> findByIdAndUserId(String id, String userId);
 
+    List<Polygon> findAllByUserIdAndIdIn(String userId, List<String> ids);
 }
