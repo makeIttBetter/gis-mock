@@ -1,4 +1,4 @@
-package com.example.realestate.service;
+package com.example.realestate.service.upload;
 
 import com.example.realestate.client.CensusGeocoderClient;
 import com.example.realestate.client.utahmap.UtahMapServiceClient;
@@ -216,9 +216,7 @@ public class RealEstateCsvService {
                                     List<RealEstateCsvErrorDto> errorList,
                                     List<String[]> unsavedRows) {
         try {
-            String combinedAddress = buildFullAddress(record);
-            String address = record.getFullAddress() == null || record.getFullAddress().isEmpty()
-                    ? combinedAddress : record.getFullAddress();
+            String address = buildFullAddress(record);
             boolean found = tryCensusGeocode(record, address);
             if (!found) {
                 found = tryUtahGeocode(record, address, record.getZip());
@@ -239,7 +237,11 @@ public class RealEstateCsvService {
         if (rec.getCity() != null) sb.append(rec.getCity()).append(", ");
         if (rec.getState() != null) sb.append(rec.getState()).append(", ");
         if (rec.getZip() != null) sb.append(rec.getZip());
-        return sb.toString().replaceAll("null", "").trim();
+
+        String combinedAddr = sb.toString().replaceAll("null", "").trim();
+        String fullAddress = rec.getFullAddress();
+        return fullAddress == null || fullAddress.isEmpty()
+                ? combinedAddr : fullAddress;
     }
 
     private boolean tryCensusGeocode(RealEstateCsvRecord record, String addr) {
@@ -303,7 +305,13 @@ public class RealEstateCsvService {
         String city = getCellValue(row, headerMap, "city");
         String state = getCellValue(row, headerMap, "state");
         String zip = getCellValue(row, headerMap, "zip");
-        dto.setAddress(address + ", " + city + ", " + state + ", " + zip);
+
+        String combinedAddr = address + ", " + city + ", " + state + ", " + zip;
+        String fullAddress = getCellValue(row, headerMap, "Full Address");
+        System.out.println("ADDRESS: Full address: " + fullAddress);
+        System.out.println("ADDRESS: Combined address: " + combinedAddr);
+        dto.setAddress(fullAddress != null && !fullAddress.isEmpty()
+                ? fullAddress : combinedAddr);
 
         dto.setErrorMessage(message);
         return dto;
