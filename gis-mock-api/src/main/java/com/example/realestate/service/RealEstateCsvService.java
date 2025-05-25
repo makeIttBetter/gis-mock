@@ -217,9 +217,11 @@ public class RealEstateCsvService {
                                     List<String[]> unsavedRows) {
         try {
             String combinedAddress = buildFullAddress(record);
-            boolean found = tryCensusGeocode(record, combinedAddress);
+            String address = record.getFullAddress() == null || record.getFullAddress().isEmpty()
+                    ? combinedAddress : record.getFullAddress();
+            boolean found = tryCensusGeocode(record, address);
             if (!found) {
-                found = tryUtahGeocode(record, record.getAddress(), record.getZip());
+                found = tryUtahGeocode(record, address, record.getZip());
             }
             if (!found) {
                 skipRow(errorList, unsavedRows, row, headerMap, rowNum,

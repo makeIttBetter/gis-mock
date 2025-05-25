@@ -43,7 +43,12 @@ public class GoogleOAuth2Controller {
     @GetMapping("/verify")
     @PreAuthorize("isAuthenticated()")
     public Map<String, Boolean> checkToken() {
-        boolean valid = oauth2.verifyCurrentUserToken();
-        return Map.of("valid", valid);
+        try {
+            boolean valid = oauth2.verifyCurrentUserToken();
+            return Map.of("valid", valid);
+        } catch (Exception e) {
+            log.error("Error verifying token: {}", e.getMessage());
+            return Map.of("valid", false);
+        }
     }
 }

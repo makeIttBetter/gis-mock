@@ -24,6 +24,7 @@ export const API_ENDPOINTS = {
 
     /* ------- NEW: google ------- */
     GOOGLE_EXPORT_SHEETS: `${BACKEND_URL}/api/google/sheets/export`,
+    GOOGLE_EXPORT_SHEETS_MULTIPLE: `${BACKEND_URL}/api/google/sheets/export-multiple`,
     GOOGLE_OAUTH_AUTHORIZE: `${BACKEND_URL}/api/google/oauth2/authorize`,
     GOOGLE_OAUTH_VERIFY:   `${BACKEND_URL}/api/google/oauth2/verify`,
 } as const;

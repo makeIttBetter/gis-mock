@@ -43,3 +43,11 @@ export async function checkGoogleAuthStatus(): Promise<boolean> {
 export async function exportPolygonToGoogleSheets(polygonId: string): Promise<void> {
     await apiPost("GOOGLE_EXPORT_SHEETS", {polygonId});
 }
+
+/* ---------- Export multiple polygons ---------- */
+export async function exportMultiplePolygonsToGoogleSheets(
+    polygonIds: string[],
+    sheetName: string
+): Promise<void> {
+    await apiPost("GOOGLE_EXPORT_SHEETS_MULTIPLE", { polygonIds, sheetName });
+}

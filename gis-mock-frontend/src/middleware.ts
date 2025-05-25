@@ -1,17 +1,15 @@
-import type {NextRequest} from "next/server";
-import {NextResponse} from "next/server";
-import {verifyToken} from "@/lib/authApi"; // import your new function
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { verifyToken } from "@/lib/authApi";
 
 // Debug logging (remove in production)
 console.log("Middleware loaded");
 
-// This must match whatever you have in config or environment for your API endpoints.
-// But typically, you'll rely on the "verifyToken(cookieHeader)" to do the actual request.
 export async function middleware(request: NextRequest) {
-    const {pathname} = request.nextUrl;
+    const { pathname } = request.nextUrl;
     console.log("Middleware processing:", pathname);
 
-    // 1) Skip auth checks for home page "/", plus these other paths:
+    // 1) Skip auth checks for specific paths
     if (
         pathname === "/" ||
         pathname.startsWith("/_next") ||
@@ -20,7 +18,11 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith("/api")
     ) {
         console.log("Skipping token check for:", pathname);
-        return NextResponse.next();
+
+        // Make sure we remove any unwanted headers, just in case
+        const response = NextResponse.next();
+        response.headers.delete("WWW-Authenticate");
+        return response;
     }
 
     // 2) Otherwise, verify the token
@@ -33,18 +35,29 @@ export async function middleware(request: NextRequest) {
 
         if (isValid) {
             console.log("Token valid, proceeding.");
-            return NextResponse.next();
+            const response = NextResponse.next();
+            // Remove any accidental `WWW-Authenticate` header just in case
+            response.headers.delete("WWW-Authenticate");
+            return response;
         } else {
             console.log("Token invalid, redirecting to /login");
             const loginUrl = request.nextUrl.clone();
             loginUrl.pathname = "/login";
-            return NextResponse.redirect(loginUrl);
+
+            // Return redirect, but remove `WWW-Authenticate` so no popup
+            const redirectRes = NextResponse.redirect(loginUrl);
+            redirectRes.headers.delete("WWW-Authenticate");
+            return redirectRes;
         }
     } catch (error) {
         console.error("Token verification error:", error);
         const loginUrl = request.nextUrl.clone();
         loginUrl.pathname = "/login";
-        return NextResponse.redirect(loginUrl);
+
+        // Return redirect, but remove `WWW-Authenticate` so no popup
+        const redirectRes = NextResponse.redirect(loginUrl);
+        redirectRes.headers.delete("WWW-Authenticate");
+        return redirectRes;
     }
 }
 

@@ -14,6 +14,7 @@ import {
     checkGoogleAuthStatus,
     startGoogleOAuthFlow,
     exportPolygonToGoogleSheets,
+    exportMultiplePolygonsToGoogleSheets,
 } from "@/lib/googleApi";
 
 /**
@@ -30,6 +31,10 @@ export default function PolygonListPanel() {
 
     // Track if Google token is valid
     const [googleTokenValid, setGoogleTokenValid] = useState<boolean>(false);
+
+    // Track selected polygons for multi-export
+    const [selectedPolygonIds, setSelectedPolygonIds] = useState<string[]>([]);
+    const [exportMultipleLoading, setExportMultipleLoading] = useState(false);
 
     async function loadData() {
         try {
@@ -150,9 +155,53 @@ export default function PolygonListPanel() {
         }
     }
 
+    function toggleSelected(id: string, checked: boolean) {
+        setSelectedPolygonIds((prev) => {
+            if (checked) {
+                return Array.from(new Set([...prev, id]));
+            } else {
+                return prev.filter((p) => p !== id);
+            }
+        });
+    }
+
+    async function handleExportMultiple() {
+        if (selectedPolygonIds.length === 0) return;
+        const sheetName = window.prompt("Enter Google Sheet name", "PolygonsExport");
+        if (!sheetName) return;
+        try {
+            setExportMultipleLoading(true);
+            await exportMultiplePolygonsToGoogleSheets(selectedPolygonIds, sheetName);
+            alert("Polygons exported to Google Sheets");
+        } catch (error) {
+            console.error("Export multiple polygons failed:", error);
+            alert("Failed to export polygons to Google Sheets");
+        } finally {
+            setExportMultipleLoading(false);
+        }
+    }
+
     return (
         <div className="p-4">
             <h1 className="text-xl font-bold mb-4">Saved Polygons</h1>
+            <div className="mb-4 flex gap-2">
+                {!googleTokenValid ? (
+                    <button
+                        onClick={handleConnectGoogle}
+                        className="px-3 py-1 bg-yellow-500 text-white rounded"
+                    >
+                        Connect with Google
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleExportMultiple}
+                        className="px-3 py-1 bg-yellow-600 text-white rounded"
+                        disabled={exportMultipleLoading || selectedPolygonIds.length === 0}
+                    >
+                        {exportMultipleLoading ? "Exporting..." : "Export Selected to Google Sheets"}
+                    </button>
+                )}
+            </div>
             {polygons.map((polygon) => {
                 const isExpanded = expandedPolygonId === polygon.id;
                 const attachedReList = expandedPolygonRealEstates[polygon.id] || [];
@@ -161,12 +210,20 @@ export default function PolygonListPanel() {
                 return (
                     <div key={polygon.id} className="bg-white shadow p-4 mb-4 rounded border">
                         <div className="flex justify-between items-center">
-                            <div>
-                                <h2 className="font-semibold text-lg">{polygon.name}</h2>
-                                <p className="text-sm text-gray-600">
-                                    Created: {polygon.dateCreated} | Updated: {polygon.dateUpdated}
-                                </p>
-                                <p>{`Objects in Polygon: ${polygon.realEstateObjects.length}`}</p>
+                            <div className="flex items-start gap-2">
+                                <input
+                                    type="checkbox"
+                                    className="mt-1"
+                                    checked={selectedPolygonIds.includes(polygon.id)}
+                                    onChange={(e) => toggleSelected(polygon.id, e.target.checked)}
+                                />
+                                <div>
+                                    <h2 className="font-semibold text-lg">{polygon.name}</h2>
+                                    <p className="text-sm text-gray-600">
+                                        Created: {polygon.dateCreated} | Updated: {polygon.dateUpdated}
+                                    </p>
+                                    <p>{`Objects in Polygon: ${polygon.realEstateObjects.length}`}</p>
+                                </div>
                             </div>
                             <div className="flex gap-2">
                                 {/* Expand/Collapse */}
