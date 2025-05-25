@@ -1,5 +1,5 @@
 "use client";
-import React, { CSSProperties, useCallback, useRef, useState } from "react";
+import React, {CSSProperties, useCallback, useRef, useState} from "react";
 import {
     DrawingManager,
     GoogleMap,
@@ -8,14 +8,16 @@ import {
     Polygon as MapPolygon,
     useLoadScript,
 } from "@react-google-maps/api";
-import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
 import RealEstateMarkerInfo from "@/components/realestate/RealEstateMarkerInfo";
-import { RealEstateMarkerInfoMode } from "@/components/realestate/RealEstateMarkerInfoMode";
+import {RealEstateMarkerInfoMode} from "@/components/realestate/RealEstateMarkerInfoMode";
 
 const LIBRARIES: ("drawing" | "geometry" | "places" | "visualization")[] = [
     "drawing",
     "geometry",
 ];
+
+let globalCenter: google.maps.LatLngLiteral | null = null;
 
 export interface RealEstateMapProps {
     realEstates: RealEstateMapDto[];
@@ -45,15 +47,16 @@ export interface RealEstateMapProps {
 export default function RealEstateMap({
                                           realEstates,
                                           attachedIds,
-                                          center = { lat: 40.114955, lng: -111.654923 },
+                                          // keep your old default
+                                          center = {lat: 40.114955, lng: -111.654923},
                                           zoom = 11,
-                                          containerStyle = { width: "100%", height: "400px" },
+                                          containerStyle = {width: "100%", height: "400px"},
                                           displayPolygon,
                                           editablePolygon,
                                           onUpdatePolygon,
                                           onCreatePolygon,
                                       }: RealEstateMapProps) {
-    const { isLoaded } = useLoadScript({
+    const {isLoaded} = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: LIBRARIES,
     });
@@ -76,6 +79,12 @@ export default function RealEstateMap({
         mapRef.current = map;
     }, []);
 
+    // If globalCenter exists, use it. Otherwise use the prop-based default.
+    const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral>(
+        globalCenter || center
+    );
+
+    // Keep the rest of your logic unchanged...
     function startDrawing() {
         if (draftPolygon) {
             draftPolygon.setMap(null);
@@ -96,7 +105,7 @@ export default function RealEstateMap({
         const coords: { lat: number; lng: number }[] = [];
         for (let i = 0; i < path.getLength(); i++) {
             const pt = path.getAt(i);
-            coords.push({ lat: pt.lat(), lng: pt.lng() });
+            coords.push({lat: pt.lat(), lng: pt.lng()});
         }
         return coords;
     }
@@ -144,7 +153,7 @@ export default function RealEstateMap({
         if (!name) return;
 
         // Determine which real estate objects are inside
-        const googlePoly = new google.maps.Polygon({ paths: draftCoords });
+        const googlePoly = new google.maps.Polygon({paths: draftCoords});
         const insideIds: string[] = [];
 
         realEstates.forEach((re) => {
@@ -187,7 +196,7 @@ export default function RealEstateMap({
         const coords = getPathCoords(path);
 
         // Determine which real estate objects are inside
-        const googlePoly = new google.maps.Polygon({ paths: coords });
+        const googlePoly = new google.maps.Polygon({paths: coords});
         const insideIds: string[] = [];
 
         realEstates.forEach((re) => {
@@ -240,9 +249,21 @@ export default function RealEstateMap({
 
             <GoogleMap
                 mapContainerStyle={containerStyle}
-                center={center}
+                center={mapCenter}
                 zoom={zoom}
                 onLoad={onMapLoad}
+
+                onIdle={() => {
+                    if (mapRef.current) {
+                        const c = mapRef.current.getCenter();
+                        if (c) {
+                            const newCenter = {lat: c.lat(), lng: c.lng()};
+                            setMapCenter(newCenter);
+                            // Also update globalCenter so it persists after re-mount
+                            globalCenter = newCenter;
+                        }
+                    }
+                }}
             >
                 <DrawingManager
                     onLoad={(mgr) => (drawingManagerRef.current = mgr)}
@@ -293,10 +314,7 @@ export default function RealEstateMap({
 
                 {/* Markers */}
                 {realEstates.map((re) => {
-                    if (
-                        re.latitude == null ||
-                        re.longitude == null
-                    ) {
+                    if (re.latitude == null || re.longitude == null) {
                         return null;
                     }
                     const isPolyAttached = attachedIds?.includes(re.id) ?? false;
@@ -304,7 +322,7 @@ export default function RealEstateMap({
                     return (
                         <AdvancedMarkerElement
                             key={re.id}
-                            position={{ lat: re.latitude, lng: re.longitude }}
+                            position={{lat: re.latitude, lng: re.longitude}}
                             icon={{
                                 url: isPolyAttached
                                     ? "/yellow-dot.png"
@@ -318,7 +336,7 @@ export default function RealEstateMap({
                 {/* InfoWindow w/ editing form */}
                 {selectedRE && selectedRE.latitude != null && selectedRE.longitude != null && (
                     <InfoWindow
-                        position={{ lat: selectedRE.latitude, lng: selectedRE.longitude }}
+                        position={{lat: selectedRE.latitude, lng: selectedRE.longitude}}
                         onCloseClick={() => setSelectedRE(null)}
                     >
                         <div>
