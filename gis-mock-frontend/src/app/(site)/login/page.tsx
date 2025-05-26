@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, {useState} from "react";
+import {useRouter} from "next/navigation";
 
 /**
  * Reusable function to perform the sign-in request.
@@ -13,9 +13,9 @@ async function signInRequest(username: string, password: string): Promise<void> 
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
         {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             credentials: "include", // ensures cookies are included
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({username, password}),
         }
     );
 

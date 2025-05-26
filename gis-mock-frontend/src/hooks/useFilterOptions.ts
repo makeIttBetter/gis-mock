@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { apiGetPath } from "@/lib/api";
+import {useEffect, useState} from "react";
+import {apiGetPath} from "@/lib/api";
 
 /**
  * Hook for fetching distinct filter options for a given property key

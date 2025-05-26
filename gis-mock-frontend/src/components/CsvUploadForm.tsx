@@ -1,10 +1,10 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {
+    abortCsvProcessing,
     getCsvUploadStatus,
     RealEstateCsvProcessingStatusDto,
     uploadCsvFile,
-    abortCsvProcessing,
 } from "@/lib/realEstateCsvApi";
 
 /**
@@ -140,7 +140,7 @@ const CsvUploadForm: React.FC = () => {
         }
 
         const csvContent = lines.join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement("a");
@@ -220,7 +220,7 @@ const CsvUploadForm: React.FC = () => {
                                 <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
                                     <div
                                         className="bg-blue-500 h-4 rounded-full"
-                                        style={{ width: `${percentage}%` }}
+                                        style={{width: `${percentage}%`}}
                                     />
                                 </div>
                             )}

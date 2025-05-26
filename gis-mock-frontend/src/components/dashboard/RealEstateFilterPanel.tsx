@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
-import { useFilterOptions } from "@/hooks/useFilterOptions";
+import React, {useEffect, useState} from "react";
+import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
+import {useFilterOptions} from "@/hooks/useFilterOptions";
 import TagMultiSelect from "@/components/TagMultiSelect";
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
     onChange: (newFilters: RealEstateFilterParams) => void;
 }
 
-export default function RealEstateFilterPanel({ filters, onChange }: Props) {
+export default function RealEstateFilterPanel({filters, onChange}: Props) {
     const [localFilters, setLocalFilters] = useState<RealEstateFilterParams>(filters);
 
     // Keep local state in sync
@@ -19,15 +19,15 @@ export default function RealEstateFilterPanel({ filters, onChange }: Props) {
     }, [filters]);
 
     // Single-select filter options
-    const { options: cityOptions } = useFilterOptions("city");
-    const { options: stateOptions } = useFilterOptions("state");
-    const { options: statusOptions } = useFilterOptions("status");
+    const {options: cityOptions} = useFilterOptions("city");
+    const {options: stateOptions} = useFilterOptions("state");
+    const {options: statusOptions} = useFilterOptions("status");
 
     // Basic change handler
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
-        const { name, value } = e.target;
+        const {name, value} = e.target;
         setLocalFilters((prev) => ({
             ...prev,
             [name]: value,

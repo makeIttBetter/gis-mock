@@ -1,6 +1,6 @@
 // file: src/components/TagMultiSelect.tsx
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, {useEffect, useRef, useState} from "react";
 
 /**
  * Props for a tag-based multi-select component (like LinkedIn Skills picker).
@@ -45,6 +45,7 @@ const TagMultiSelect: React.FC<TagMultiSelectProps> = ({
                 setShowDropdown(false);
             }
         }
+
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);

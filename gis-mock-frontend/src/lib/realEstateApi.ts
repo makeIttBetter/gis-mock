@@ -46,7 +46,7 @@ export async function fetchRealEstateMapData(
     filters: RealEstateFilterParams,
     polygonId?: string
 ): Promise<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }> {
-    const params = { ...filters, polygonId };
+    const params = {...filters, polygonId};
     return apiGet<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }>(
         "REAL_ESTATE_MAP",
         params

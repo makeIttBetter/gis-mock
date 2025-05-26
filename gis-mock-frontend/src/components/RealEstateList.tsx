@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { RealEstate } from "@/interfaces/RealEstate";
+import {RealEstate} from "@/interfaces/RealEstate";
 
 /**
  * Props:
@@ -14,7 +14,7 @@ interface Props {
  * Displays a simple list of real estate objects,
  * now showing MLS# instead of the internal ID.
  */
-const RealEstateList: React.FC<Props> = ({ realEstates }) => {
+const RealEstateList: React.FC<Props> = ({realEstates}) => {
     return (
         <div className="bg-white p-4 rounded shadow">
             {realEstates.length === 0 ? (

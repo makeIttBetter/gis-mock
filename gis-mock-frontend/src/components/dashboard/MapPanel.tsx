@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
-import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
 import RealEstateMap from "@/components/map/RealEstateMap";
 
 interface MapPanelProps {
@@ -48,7 +48,7 @@ export default function MapPanel({
                                      onUpdatePolygon,
                                  }: MapPanelProps) {
     return (
-        <div className="border p-2" style={{ minWidth: "300px" }}>
+        <div className="border p-2" style={{minWidth: "300px"}}>
             <h2 className="text-xl font-semibold mb-2">Map View</h2>
 
             {/* Polygon selection + Edit toggles */}
@@ -136,7 +136,7 @@ export default function MapPanel({
                 attachedIds={selectedPolygon?.realEstateObjects}
                 // center={{ lat: 40.114955, lng: -111.654923 }}
                 zoom={11}
-                containerStyle={{ width: "100%", height: "400px" }}
+                containerStyle={{width: "100%", height: "400px"}}
                 displayPolygon={selectedPolygon && !editMode ? selectedPolygon : undefined}
                 editablePolygon={selectedPolygon && editMode ? selectedPolygon : undefined}
                 onUpdatePolygon={onUpdatePolygon}

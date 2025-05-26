@@ -1,6 +1,6 @@
-import { apiDelete, apiGet, apiGetPath, apiPost, apiPut } from "@/lib/api";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
-import { API_ENDPOINTS } from "@/config";
+import {apiDelete, apiGet, apiGetPath, apiPost, apiPut} from "@/lib/api";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import {API_ENDPOINTS} from "@/config";
 
 /**
  * Fetch all saved polygons.
@@ -24,7 +24,7 @@ export async function createPolygon(
     coordinates: Array<{ lat: number; lng: number }>,
     realEstateIds: string[]
 ): Promise<PolygonDTO> {
-    return apiPost<PolygonDTO>("POLYGONS", { name, coordinates, realEstateIds });
+    return apiPost<PolygonDTO>("POLYGONS", {name, coordinates, realEstateIds});
 }
 
 /**

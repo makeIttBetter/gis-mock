@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { RealEstate } from "@/interfaces/RealEstate";
-import { PaginationDTO } from "@/interfaces/PaginationDTO";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {PaginationDTO} from "@/interfaces/PaginationDTO";
 import RealEstateList from "@/components/RealEstateList";
-import { PaginationControls } from "@/components/PaginationControls";
+import {PaginationControls} from "@/components/PaginationControls";
 
 interface RealEstateListPanelProps {
     listRealEstates: RealEstate[];
@@ -28,10 +28,10 @@ export default function RealEstateListPanel({
             {listLoading ? (
                 <div>Loading properties...</div>
             ) : (
-                <RealEstateList realEstates={listRealEstates} />
+                <RealEstateList realEstates={listRealEstates}/>
             )}
 
-            <PaginationControls pagination={pagination} onPageChange={onPageChange} />
+            <PaginationControls pagination={pagination} onPageChange={onPageChange}/>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { PaginationDTO } from "@/interfaces/PaginationDTO";
+import {PaginationDTO} from "@/interfaces/PaginationDTO";
 
 interface Props {
     pagination: PaginationDTO;
@@ -11,7 +11,7 @@ export const PaginationControls: React.FC<Props> = ({
                                                         pagination,
                                                         onPageChange
                                                     }) => {
-    const { page, page_size, total_pages, total_count } = pagination;
+    const {page, page_size, total_pages, total_count} = pagination;
 
     function handlePrev() {
         if (page > 1) onPageChange(page - 1);

@@ -1,15 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 import Link from "next/link";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
-import {
-    fetchPolygons,
-    deletePolygon,
-    exportPolygonCsv,
-} from "@/lib/polygonApi";
-import { RealEstate } from "@/interfaces/RealEstate";
-import { fetchAttachedRealEstate } from "@/lib/realEstateApi";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import {deletePolygon, exportPolygonCsv, fetchPolygons,} from "@/lib/polygonApi";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {fetchAttachedRealEstate} from "@/lib/realEstateApi";
 
 /**
  * Renders a list of saved polygons, each with an "Expand", "Edit", "Delete", and "Export to CSV" button.
@@ -49,9 +45,11 @@ export default function PolygonsList() {
         function handlePolygonCreated() {
             loadData();
         }
+
         function handlePolygonDeleted() {
             loadData();
         }
+
         window.addEventListener("polygonCreated", handlePolygonCreated);
         window.addEventListener("polygonDeleted", handlePolygonDeleted);
 

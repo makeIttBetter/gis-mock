@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
-import { useFilterOptions } from "@/hooks/useFilterOptions";
+import React, {useEffect, useState} from "react";
+import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
+import {useFilterOptions} from "@/hooks/useFilterOptions";
 import TagMultiSelect from "@/components/TagMultiSelect";
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
  * A form for filtering real estate data, with single- and multi-select,
  * numeric fields, plus the 3-state BasementFinished (All / Yes / No).
  */
-const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
+const RealEstateFilterForm: React.FC<Props> = ({filters, onChange}) => {
     const [localFilters, setLocalFilters] = useState<RealEstateFilterParams>(filters);
 
     // Keep local state in sync whenever "filters" prop changes
@@ -40,11 +40,11 @@ const RealEstateFilterForm: React.FC<Props> = ({ filters, onChange }) => {
     } = useFilterOptions("status");
 
     // Multi-select filter options
-    const { options: propertyTypeOptions } = useFilterOptions("propertyType");
+    const {options: propertyTypeOptions} = useFilterOptions("propertyType");
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
-        const { name, value } = e.target;
+        const {name, value} = e.target;
         setLocalFilters((prev) => ({
             ...prev,
             [name]: value,

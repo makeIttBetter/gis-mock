@@ -1,6 +1,6 @@
-import { API_ENDPOINTS } from "@/config";
-import { ProfileResponseDto } from "@/interfaces/ProfileResponseDto";
-import { ProfileRequestDto } from "@/interfaces/ProfileRequestDto";
+import {API_ENDPOINTS} from "@/config";
+import {ProfileResponseDto} from "@/interfaces/ProfileResponseDto";
+import {ProfileRequestDto} from "@/interfaces/ProfileRequestDto";
 
 /**
  * Fetch the current user's profile (GET /api/profile).

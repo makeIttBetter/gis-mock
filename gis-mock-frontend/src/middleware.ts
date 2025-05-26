@@ -1,12 +1,12 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/authApi";
+import type {NextRequest} from "next/server";
+import {NextResponse} from "next/server";
+import {verifyToken} from "@/lib/authApi";
 
 // Debug logging (remove in production)
 console.log("Middleware loaded");
 
 export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
+    const {pathname} = request.nextUrl;
     console.log("Middleware processing:", pathname);
 
     // 1) Skip auth checks for specific paths

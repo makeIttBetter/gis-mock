@@ -1,21 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
-import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
-import {
-    fetchPolygons,
-    createPolygon,
-    updatePolygon,
-} from "@/lib/polygonApi";
-import {
-    fetchRealEstateMapData,
-    fetchRealEstatePaginated,
-} from "@/lib/realEstateApi";
-import { RealEstate } from "@/interfaces/RealEstate";
-import { PaginationDTO } from "@/interfaces/PaginationDTO";
+import React, {useEffect, useState} from "react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
+import {createPolygon, fetchPolygons, updatePolygon,} from "@/lib/polygonApi";
+import {fetchRealEstateMapData, fetchRealEstatePaginated,} from "@/lib/realEstateApi";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {PaginationDTO} from "@/interfaces/PaginationDTO";
 
 import RealEstateFilterPanel from "./RealEstateFilterPanel";
 import RealEstateListPanel from "./RealEstateListPanel";
@@ -45,7 +38,7 @@ export default function RealEstateDashboardContainer() {
     const [mapRealEstates, setMapRealEstates] = useState<{
         filtered: RealEstateMapDto[];
         attached: RealEstateMapDto[];
-    }>({ filtered: [], attached: [] });
+    }>({filtered: [], attached: []});
 
     /** Paginated list data. */
     const [listRealEstates, setListRealEstates] = useState<RealEstate[]>([]);
@@ -145,6 +138,7 @@ export default function RealEstateDashboardContainer() {
         function handlePolygonEvent() {
             loadPolygons();
         }
+
         window.addEventListener("polygonCreated", handlePolygonEvent);
         window.addEventListener("polygonDeleted", handlePolygonEvent);
 
@@ -200,7 +194,7 @@ export default function RealEstateDashboardContainer() {
      * 5) onChange Filter -> rewrite URL
      --------------------------- */
     function handleFilterChange(newFilters: RealEstateFilterParams) {
-        const merged = { ...filters, ...newFilters };
+        const merged = {...filters, ...newFilters};
         const qp: Record<string, string> = {};
 
         // Rebuild query parameters only for non-empty fields
@@ -249,7 +243,7 @@ export default function RealEstateDashboardContainer() {
         }
 
         const queryStr = new URLSearchParams(qp).toString();
-        router.replace(`?${queryStr}`, { scroll: false });
+        router.replace(`?${queryStr}`, {scroll: false});
     }
 
     /* ---------------------------
@@ -334,7 +328,7 @@ export default function RealEstateDashboardContainer() {
             <h1 className="text-2xl font-bold mb-4">Real Estate Dashboard</h1>
 
             {/* Filter Panel */}
-            <RealEstateFilterPanel filters={filters} onChange={handleFilterChange} />
+            <RealEstateFilterPanel filters={filters} onChange={handleFilterChange}/>
 
             {/* Main content area */}
             <div className="flex flex-col lg:flex-row mt-4 gap-4">
@@ -365,7 +359,7 @@ export default function RealEstateDashboardContainer() {
                         onUpdatePolygon={handleUpdatePolygon}
                     />
 
-                    <PolygonListPanel />
+                    <PolygonListPanel/>
                 </div>
             </div>
         </div>

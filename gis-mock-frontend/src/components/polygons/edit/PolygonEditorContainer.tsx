@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { fetchPolygonById, updatePolygon } from "@/lib/polygonApi";
-import { fetchRealEstateMapData } from "@/lib/realEstateApi";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
-import { RealEstateMapDto } from "@/interfaces/RealEstateMapDto";
-import { RealEstateFilterParams } from "@/interfaces/RealEstateFilterParams";
+import React, {useCallback, useEffect, useState} from "react";
+import {fetchPolygonById, updatePolygon} from "@/lib/polygonApi";
+import {fetchRealEstateMapData} from "@/lib/realEstateApi";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
+import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
 
 import PolygonInfoForm from "./PolygonInfoForm";
 import PolygonMapPanel from "./PolygonMapPanel";

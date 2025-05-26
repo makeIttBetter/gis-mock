@@ -1,9 +1,9 @@
 "use client";
-import React, { useState } from "react";
-import { RealEstate } from "@/interfaces/RealEstate";
-import { updateRealEstate } from "@/lib/realEstateApi";
-import { RealEstateUpdatePayload } from "@/interfaces/RealEstateUpdatePayload";
-import { RealEstateMarkerInfoMode } from "./RealEstateMarkerInfoMode";
+import React, {useState} from "react";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {updateRealEstate} from "@/lib/realEstateApi";
+import {RealEstateUpdatePayload} from "@/interfaces/RealEstateUpdatePayload";
+import {RealEstateMarkerInfoMode} from "./RealEstateMarkerInfoMode";
 
 interface RealEstateMarkerInfoProps {
     realEstate: RealEstate;
@@ -70,7 +70,7 @@ export default function RealEstateMarkerInfo({
     }
 
     return (
-        <div style={{ minWidth: 220 }}>
+        <div style={{minWidth: 220}}>
             {mode === RealEstateMarkerInfoMode.POLYGON_EDIT_PAGE && (
                 <div className="mb-2">
                     <button
