@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+          http://www.liquibase.org/xml/ns/dbchangelog
+          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="add-additional-indexes" author="dev">
+
+        <!-- 1) Real Estate table -->
+        <!-- Index on commonly filtered columns (city, state, mls_number, etc.) -->
+        <createIndex indexName="idx_realestate_mlsnumber" tableName="real_estate">
+            <column name="mls_number"/>
+        </createIndex>
+        <createIndex indexName="idx_realestate_city" tableName="real_estate">
+            <column name="city"/>
+        </createIndex>
+        <createIndex indexName="idx_realestate_state" tableName="real_estate">
+            <column name="state"/>
+        </createIndex>
+        <!-- Index on lat/long for faster bounding box or location-based queries (optional) -->
+        <createIndex indexName="idx_realestate_lat" tableName="real_estate">
+            <column name="latitude"/>
+        </createIndex>
+        <createIndex indexName="idx_realestate_lon" tableName="real_estate">
+            <column name="longitude"/>
+        </createIndex>
+
+        <!-- 2) Polygon table -->
+        <!-- Often you'd want to query polygons by user_id, or by name -->
+        <createIndex indexName="idx_polygon_userid" tableName="polygon">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex indexName="idx_polygon_name" tableName="polygon">
+            <column name="name"/>
+        </createIndex>
+
+        <!-- 3) user_google_oauth_token table -->
+        <!-- We already have user_id unique, but let's index expires_at if needed -->
+        <createIndex indexName="idx_user_google_oauth_expires" tableName="user_google_oauth_token">
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

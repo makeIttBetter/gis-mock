@@ -11,4 +11,6 @@
     <include file="liquibase/changelog-v1/create-polygon-realestate-table.xml"/>
     <include file="liquibase/changelog-v1/create-user-google-oauth-token-table.xml"/>
     <include file="liquibase/changelog-v2/add-google-sheets-url-to-polygon.xml"/>
+    <!-- Add our new indexes file here -->
+    <include file="liquibase/changelog-v2/add-additional-indexes.xml"/>
 </databaseChangeLog>
