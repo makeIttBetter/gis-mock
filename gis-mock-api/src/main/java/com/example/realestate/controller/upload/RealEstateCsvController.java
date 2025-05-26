@@ -63,4 +63,14 @@ public class RealEstateCsvController {
 
         return ResponseEntity.ok(statusDto);
     }
+
+    @DeleteMapping("/upload/abort")
+    public ResponseEntity<Map<String, String>> abortCsv() {
+        String userId = securityService.getCurrentUserId();
+
+        processingManager.abortTask(userId);
+
+        return ResponseEntity.ok(Collections.singletonMap("message", "CSV processing aborted."));
+    }
+
 }

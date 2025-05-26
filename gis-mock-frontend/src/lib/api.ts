@@ -224,3 +224,19 @@ export async function apiPostFormData<T>(
     return res.json() as Promise<T>;
 }
 
+// Inside src/lib/api.ts (for example):
+export async function apiDeletePath(endpoint: keyof typeof API_ENDPOINTS, path: string): Promise<void> {
+    const baseUrl = API_ENDPOINTS[endpoint];
+    const encodedPath = encodePath(path);
+    const url = `${baseUrl}/${encodedPath}`;
+
+    const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `DELETE ${url} failed: ${res.status}`);
+    }
+}
+

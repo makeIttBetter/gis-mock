@@ -1,5 +1,5 @@
-// File: src/lib/realEstateCsvApi.ts
-import {apiGetPath, apiPostFormData} from "@/lib/api";
+import { apiGetPath, apiPostFormData } from "@/lib/api";
+import { apiDeletePath } from "@/lib/api";  // <== if you define it in api.ts
 
 /**
  * Shape of the CSV error item.
@@ -41,9 +41,7 @@ export async function uploadCsvFile(file: File): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Uses the generic apiPostFormData to POST to /api/real-estate/upload
-    // The endpoint "REAL_ESTATE" is mapped to "/api/real-estate"
-    // Then we add the path "upload".
+    // POST to /api/real-estate/upload
     await apiPostFormData<void>("REAL_ESTATE", "upload", formData);
 }
 
@@ -51,6 +49,13 @@ export async function uploadCsvFile(file: File): Promise<void> {
  * Fetch the current CSV processing status from /api/real-estate/upload/status.
  */
 export async function getCsvUploadStatus(): Promise<RealEstateCsvProcessingStatusDto> {
-    // Using apiGetPath to call GET /api/real-estate/upload/status
     return apiGetPath<RealEstateCsvProcessingStatusDto>("REAL_ESTATE", "upload/status");
+}
+
+/**
+ * Abort (cancel) the current CSV processing by calling
+ * DELETE /api/real-estate/upload/abort
+ */
+export async function abortCsvProcessing(): Promise<void> {
+    await apiDeletePath("REAL_ESTATE", "upload/abort");
 }

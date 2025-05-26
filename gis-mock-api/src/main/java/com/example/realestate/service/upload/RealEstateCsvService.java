@@ -8,6 +8,7 @@ import com.example.realestate.converters.upload.RealEstateCsvRecordToRealEstateC
 import com.example.realestate.dto.upload.RealEstateCsvErrorDto;
 import com.example.realestate.dto.upload.RealEstateCsvRecord;
 import com.example.realestate.dto.upload.RealEstateCsvUploadResult;
+import com.example.realestate.dto.upload.RowData;
 import com.example.realestate.model.RealEstate;
 import com.example.realestate.repository.RealEstateRepository;
 import com.example.realestate.util.UTMConverter;
@@ -23,6 +24,10 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -49,113 +54,74 @@ public class RealEstateCsvService {
         this.recordToEntityConverter = recordToEntityConverter;
     }
 
+    /**
+     * Legacy method (for convenience) if you don’t need partial progress in the Manager.
+     * This creates a brand-new RealEstateCsvUploadResult inside.
+     */
     public RealEstateCsvUploadResult processCsv(MultipartFile file) {
-        RealEstateCsvUploadResult result = new RealEstateCsvUploadResult();
-        List<RealEstateCsvErrorDto> errorList = new ArrayList<>();
-        List<String[]> unsavedRows = new ArrayList<>();
+        RealEstateCsvUploadResult newResult = new RealEstateCsvUploadResult();
+        return processCsv(file, newResult);
+    }
 
-        int totalRows = 0;
-        int processedRows = 0;
-        int updatedCount = 0;
-        int createdCount = 0;
+    /**
+     * Overloaded method: Takes in an existing RealEstateCsvUploadResult
+     * so we can update processedRows in real-time.
+     */
+    public RealEstateCsvUploadResult processCsv(MultipartFile file, RealEstateCsvUploadResult result) {
+        // Thread-safe lists for errors and unsaved rows:
+        List<RealEstateCsvErrorDto> errorList = Collections.synchronizedList(new ArrayList<>());
+        List<String[]> unsavedRows = Collections.synchronizedList(new ArrayList<>());
+
+        // Use AtomicInteger for thread-safe counters:
+        AtomicInteger processedRows = new AtomicInteger(0);
+        AtomicInteger updatedCount = new AtomicInteger(0);
+        AtomicInteger createdCount = new AtomicInteger(0);
+
+        int totalRows;
 
         try (Reader reader = new InputStreamReader(file.getInputStream())) {
 
-            // 1) Build a "relaxed" CSVFormat to behave more like Excel.
-            //    - EXCEL is typically more forgiving about unbalanced quotes.
-            //    - You can also set withAllowMissingColumnNames(true), etc. if needed.
-            CSVFormat format = CSVFormat.EXCEL.builder()
-                    .setIgnoreEmptyLines(true)
-                    .setTrim(true)
-                    .setIgnoreHeaderCase(false)
-                    .setHeader() // Let the first record be used as the header
-                    .setSkipHeaderRecord(true) // so it won't appear as data
-                    .build();
+            // 1) Parse CSV and split rows into "missing lat/lon" vs. "with lat/lon"
+            ParsedCsvData parsedData = parseAndSplitCsv(reader);
+            totalRows = parsedData.totalRows;
+            result.setHeaderRow(parsedData.headerRow);
+            result.setTotalRows(totalRows);
 
+            // 2) Process each group in parallel:
+            //    - Single-thread for "missing lat/long"
+            //    - Parallel for "with lat/long"
 
-            // 2) Parse the file
-            CSVParser csvParser = format.parse(reader);
+            ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 
-            // 3) Extract the header
-            Map<String, Integer> headerMap = csvParser.getHeaderMap();
-            if (headerMap == null || headerMap.isEmpty()) {
-                throw new RuntimeException("No header row found in CSV. Please include a header row.");
-            }
-            // We'll store the header names in an array for the result
-            String[] headerRow = new String[headerMap.size()];
-            headerMap.forEach((colName, idx) -> {
-                // `colName` is the name in the header; `idx` is the column index
-                // we must ensure we place them at the correct index in the array
-                headerRow[idx] = colName;
-            });
-            result.setHeaderRow(headerRow);
+            CompletableFuture<Void> missingLatLongFuture = CompletableFuture.runAsync(
+                    () -> processRowsSequentially(
+                            parsedData.rowsMissingLatLng,
+                            errorList,
+                            unsavedRows,
+                            result, // pass the same result
+                            processedRows,
+                            updatedCount,
+                            createdCount,
+                            parsedData.headerMap
+                    ),
+                    singleThreadExecutor
+            );
 
-            // Create a row->record converter using a "headerName -> index" map
-            // We'll build our own map in lower-case keys to match your converter style
-            Map<String, Integer> finalHeaderMap = buildLowerCaseHeaderMap(headerRow);
+            CompletableFuture<Void> withLatLongFuture = CompletableFuture.runAsync(
+                    () -> processRowsInParallel(
+                            parsedData.rowsWithLatLng,
+                            errorList,
+                            unsavedRows,
+                            result, // pass the same result
+                            processedRows,
+                            updatedCount,
+                            createdCount,
+                            parsedData.headerMap
+                    )
+            );
 
-            CsvRowToRealEstateCsvRecordConverter rowConverter =
-                    new CsvRowToRealEstateCsvRecordConverter(finalHeaderMap);
-
-            // 4) For each CSV record (row) after the header
-            for (CSVRecord record : csvParser) {
-                totalRows++;
-
-                // Build a raw String[] from the CSVRecord
-                String[] rowArray = convertRecordToArray(record, headerRow.length);
-
-                try {
-                    // Convert to RealEstateCsvRecord
-                    RealEstateCsvRecord rec = rowConverter.convert(rowArray);
-
-                    // Possibly skip if verified, or skip if missing MLS#, etc.
-                    if (Boolean.TRUE.equals(rec.getVerified())) {
-                        skipRow(errorList, unsavedRows, rowArray, finalHeaderMap,
-                                totalRows, rec.getMlsNumber(),
-                                "Verified=true, skipping row");
-                        continue;
-                    }
-                    if (rec.getMlsNumber() == null || rec.getMlsNumber().isBlank()) {
-                        skipRow(errorList, unsavedRows, rowArray, finalHeaderMap,
-                                totalRows, null, "Missing MLS#, skipping row");
-                        continue;
-                    }
-
-                    // If lat/lng missing => attempt geocoding
-                    if (rec.getLatitude() == null || rec.getLongitude() == null) {
-                        fillMissingLatLong(rec, rowArray, finalHeaderMap,
-                                totalRows, errorList, unsavedRows);
-                        if (rec.getLatitude() == null || rec.getLongitude() == null) {
-                            // still missing => skip
-                            continue;
-                        }
-                    }
-
-                    // Convert record -> entity
-                    RealEstate incomingEntity = recordToEntityConverter.convert(rec);
-
-                    Optional<RealEstate> existingOpt = realEstateRepository.findByMlsNumber(rec.getMlsNumber());
-                    if (existingOpt.isPresent()) {
-                        // update existing
-                        RealEstate existing = existingOpt.get();
-                        realEstateUpdateConverter.updateFields(existing, incomingEntity);
-                        realEstateRepository.save(existing);
-                        updatedCount++;
-                    } else {
-                        // create new
-                        realEstateRepository.save(incomingEntity);
-                        createdCount++;
-                    }
-
-                    processedRows++;
-
-                } catch (Exception ex) {
-                    log.error("Error processing row {}: {}", totalRows, ex.getMessage());
-                    RealEstateCsvErrorDto errorDto = buildErrorDto(rowArray, finalHeaderMap, totalRows, ex.getMessage());
-                    errorList.add(errorDto);
-                    unsavedRows.add(rowArray);
-                }
-            }
+            CompletableFuture.allOf(missingLatLongFuture, withLatLongFuture).join();
+            singleThreadExecutor.shutdown();
 
         } catch (Exception e) {
             log.error("Failed to process CSV file: {}", e.getMessage());
@@ -163,64 +129,244 @@ public class RealEstateCsvService {
             errorDto.setRowNumber(0);
             errorDto.setErrorMessage("Failed to process CSV file: " + e.getMessage());
             errorList.add(errorDto);
+            totalRows = 0;
         }
 
-        // Summaries
-        result.setTotalRows(totalRows);
-        result.setProcessedRows(processedRows);
-        result.setUpdatedCount(updatedCount);
-        result.setCreatedCount(createdCount);
+        // 3) Store final counters in the same 'result' object
+        result.setProcessedRows(processedRows.get());
+        result.setUpdatedCount(updatedCount.get());
+        result.setCreatedCount(createdCount.get());
         result.setErrors(errorList);
         result.setUnsavedRows(unsavedRows);
 
         return result;
     }
 
-    /**
-     * Convert an Apache CSVRecord to a String[] so we can reuse existing logic.
-     */
+    /* ========================================================================
+       Parsing & Splitting
+       ======================================================================== */
+
+    private ParsedCsvData parseAndSplitCsv(Reader reader) throws Exception {
+        CSVFormat format = CSVFormat.EXCEL.builder()
+                .setIgnoreEmptyLines(true)
+                .setTrim(true)
+                .setIgnoreHeaderCase(false)
+                .setHeader()
+                .setSkipHeaderRecord(true)
+                .build();
+
+        CSVParser csvParser = format.parse(reader);
+        Map<String, Integer> apacheHeaderMap = csvParser.getHeaderMap();
+        validateHeaderMap(apacheHeaderMap);
+
+        String[] headerRow = buildHeaderRow(apacheHeaderMap);
+        Map<String, Integer> lowerCaseHeaderMap = buildLowerCaseHeaderMap(headerRow);
+        CsvRowToRealEstateCsvRecordConverter rowConverter =
+                new CsvRowToRealEstateCsvRecordConverter(lowerCaseHeaderMap);
+
+        List<RowData> rowsMissingLatLng = new ArrayList<>();
+        List<RowData> rowsWithLatLng = new ArrayList<>();
+
+        int totalRows = 0;
+        for (CSVRecord record : csvParser) {
+            totalRows++;
+            String[] rowArray = convertRecordToArray(record, headerRow.length);
+
+            try {
+                RealEstateCsvRecord rec = rowConverter.convert(rowArray);
+                RowData rowData = new RowData(rec, rowArray, totalRows);
+
+                if (rec.getLatitude() == null || rec.getLongitude() == null) {
+                    rowsMissingLatLng.add(rowData);
+                } else {
+                    rowsWithLatLng.add(rowData);
+                }
+            } catch (Exception ex) {
+                throw new RuntimeException("Error converting row " + totalRows + ": " + ex.getMessage(), ex);
+            }
+        }
+
+        ParsedCsvData parsed = new ParsedCsvData();
+        parsed.totalRows = totalRows;
+        parsed.headerRow = headerRow;
+        parsed.headerMap = lowerCaseHeaderMap;
+        parsed.rowsMissingLatLng = rowsMissingLatLng;
+        parsed.rowsWithLatLng = rowsWithLatLng;
+        return parsed;
+    }
+
+    private void validateHeaderMap(Map<String, Integer> headerMap) {
+        if (headerMap == null || headerMap.isEmpty()) {
+            throw new RuntimeException("No header row found in CSV. Please include a header row.");
+        }
+    }
+
+    private String[] buildHeaderRow(Map<String, Integer> apacheHeaderMap) {
+        String[] headerRow = new String[apacheHeaderMap.size()];
+        apacheHeaderMap.forEach((colName, idx) -> headerRow[idx] = colName);
+        return headerRow;
+    }
+
     private String[] convertRecordToArray(CSVRecord record, int expectedLength) {
         String[] row = new String[expectedLength];
         for (int i = 0; i < expectedLength; i++) {
-            // If the CSV doesn't have a value for that column, fill it with null
-            // or empty string. record.get(i) might throw if i is out of range,
-            // so let's be safe.
-            if (i < record.size()) {
-                row[i] = record.get(i);
-            } else {
-                row[i] = null;
-            }
+            row[i] = (i < record.size()) ? record.get(i) : null;
         }
         return row;
     }
 
-    /**
-     * Build a lower-case columnName -> index map for your row converter to use.
-     */
     private Map<String, Integer> buildLowerCaseHeaderMap(String[] headerRow) {
         Map<String, Integer> map = new HashMap<>();
         for (int i = 0; i < headerRow.length; i++) {
-            String colName = headerRow[i] == null ? "" : headerRow[i].trim().toLowerCase();
+            String colName = (headerRow[i] == null ? "" : headerRow[i].trim().toLowerCase());
             map.put(colName, i);
         }
         return map;
     }
 
+    /* ========================================================================
+       Processing (single-thread vs. parallel)
+       ======================================================================== */
+
+    private void processRowsSequentially(
+            List<RowData> rowDataList,
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows,
+            RealEstateCsvUploadResult partialResult, // pass the shared result
+            AtomicInteger processedRows,
+            AtomicInteger updatedCount,
+            AtomicInteger createdCount,
+            Map<String, Integer> headerMap
+    ) {
+        for (RowData rowData : rowDataList) {
+            handleSingleRow(
+                    rowData,
+                    errorList,
+                    unsavedRows,
+                    partialResult,
+                    processedRows,
+                    updatedCount,
+                    createdCount,
+                    headerMap
+            );
+        }
+    }
+
+    private void processRowsInParallel(
+            List<RowData> rowDataList,
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows,
+            RealEstateCsvUploadResult partialResult,
+            AtomicInteger processedRows,
+            AtomicInteger updatedCount,
+            AtomicInteger createdCount,
+            Map<String, Integer> headerMap
+    ) {
+        rowDataList.parallelStream().forEach(rowData ->
+                handleSingleRow(
+                        rowData,
+                        errorList,
+                        unsavedRows,
+                        partialResult,
+                        processedRows,
+                        updatedCount,
+                        createdCount,
+                        headerMap
+                )
+        );
+    }
+
     /**
-     * Attempt geocoding if lat/lng are missing, same logic as before.
+     * Processes a single row: skipping if verified or missing MLS,
+     * geocoding if needed, saving/updating in DB.
+     * Always increments processedRows in a finally block.
      */
-    private void fillMissingLatLong(RealEstateCsvRecord record,
-                                    String[] row,
-                                    Map<String, Integer> headerMap,
-                                    int rowNum,
-                                    List<RealEstateCsvErrorDto> errorList,
-                                    List<String[]> unsavedRows) {
+    private void handleSingleRow(
+            RowData rowData,
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows,
+            RealEstateCsvUploadResult partialResult, // so we can update processedRows in real-time
+            AtomicInteger processedRows,
+            AtomicInteger updatedCount,
+            AtomicInteger createdCount,
+            Map<String, Integer> headerMap
+    ) {
+        if (Thread.currentThread().isInterrupted()) {
+            log.warn("Aborting row processing for row #{}", rowData.getRowNumber());
+            return;
+        }
+
+        String[] rowArray = rowData.getRowArray();
+        RealEstateCsvRecord rec = rowData.getRecord();
+        int rowNum = rowData.getRowNumber();
+
+        try {
+            // 1) Skip if verified
+            if (Boolean.TRUE.equals(rec.getVerified())) {
+                skipRow(errorList, unsavedRows, rowArray, headerMap, rowNum,
+                        rec.getMlsNumber(), "Verified=true, skipping row");
+                return;
+            }
+
+            // 2) Skip if missing MLS#
+            if (rec.getMlsNumber() == null || rec.getMlsNumber().isBlank()) {
+                skipRow(errorList, unsavedRows, rowArray, headerMap, rowNum,
+                        null, "Missing MLS#, skipping row");
+                return;
+            }
+
+            // 3) If lat/lng missing => attempt geocoding
+            if (rec.getLatitude() == null || rec.getLongitude() == null) {
+                fillMissingLatLong(rec, rowArray, headerMap, rowNum, errorList, unsavedRows);
+                if (rec.getLatitude() == null || rec.getLongitude() == null) {
+                    return;
+                }
+            }
+
+            // 4) Convert record -> entity
+            RealEstate incomingEntity = recordToEntityConverter.convert(rec);
+
+            // 5) Check if existing
+            Optional<RealEstate> existingOpt = realEstateRepository.findByMlsNumber(rec.getMlsNumber());
+            if (existingOpt.isPresent()) {
+                // update existing
+                RealEstate existing = existingOpt.get();
+                realEstateUpdateConverter.updateFields(existing, incomingEntity);
+                realEstateRepository.save(existing);
+                updatedCount.incrementAndGet();
+            } else {
+                // create new
+                realEstateRepository.save(incomingEntity);
+                createdCount.incrementAndGet();
+            }
+
+        } catch (Exception ex) {
+            log.error("Error processing row {}: {}", rowNum, ex.getMessage());
+            addErrorAndRow(rowArray, headerMap, rowNum, ex.getMessage(), errorList, unsavedRows);
+        } finally {
+            // In all cases, increment processedRows
+            int currentCount = processedRows.incrementAndGet();
+            // Immediately update partialResult so UI sees real-time changes
+            partialResult.setProcessedRows(currentCount);
+        }
+    }
+
+    /* ========================================================================
+       Geocoding
+       ======================================================================== */
+
+    private void fillMissingLatLong(
+            RealEstateCsvRecord record,
+            String[] row,
+            Map<String, Integer> headerMap,
+            int rowNum,
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows
+    ) {
         try {
             String address = buildFullAddress(record);
-            boolean found = tryCensusGeocode(record, address);
-            if (!found) {
-                found = tryUtahGeocode(record, address, record.getZip());
-            }
+            boolean found = tryCensusGeocode(record, address) ||
+                    tryUtahGeocode(record, address, record.getZip());
             if (!found) {
                 skipRow(errorList, unsavedRows, row, headerMap, rowNum,
                         record.getMlsNumber(), "No lat/lng after geocoding");
@@ -232,33 +378,39 @@ public class RealEstateCsvService {
     }
 
     private String buildFullAddress(RealEstateCsvRecord rec) {
-        StringBuilder sb = new StringBuilder();
-        if (rec.getAddress() != null) sb.append(rec.getAddress()).append(", ");
-        if (rec.getCity() != null) sb.append(rec.getCity()).append(", ");
-        if (rec.getState() != null) sb.append(rec.getState()).append(", ");
-        if (rec.getZip() != null) sb.append(rec.getZip());
+        String combined = String.format(
+                "%s, %s, %s, %s",
+                nullSafe(rec.getAddress()),
+                nullSafe(rec.getCity()),
+                nullSafe(rec.getState()),
+                nullSafe(rec.getZip())
+        ).replaceAll(", null", "").replaceAll("null,", "").trim();
 
-        String combinedAddr = sb.toString().replaceAll("null", "").trim();
-        String fullAddress = rec.getFullAddress();
-        return fullAddress == null || fullAddress.isEmpty()
-                ? combinedAddr : fullAddress;
+        return (rec.getFullAddress() == null || rec.getFullAddress().isEmpty())
+                ? combined
+                : rec.getFullAddress().trim();
+    }
+
+    private String nullSafe(String val) {
+        return (val == null) ? "" : val;
     }
 
     private boolean tryCensusGeocode(RealEstateCsvRecord record, String addr) {
         try {
             var resp = censusGeocoderClient.geocode(addr, "4", "json");
-            if (resp != null && resp.getResult() != null &&
-                    resp.getResult().getAddressMatches() != null &&
-                    !resp.getResult().getAddressMatches().isEmpty()) {
-                var match = resp.getResult().getAddressMatches().get(0);
-                record.setLatitude(BigDecimal.valueOf(match.getCoordinates().getY()));
-                record.setLongitude(BigDecimal.valueOf(match.getCoordinates().getX()));
-                return true;
+            if (resp != null && resp.getResult() != null) {
+                var matches = resp.getResult().getAddressMatches();
+                if (matches != null && !matches.isEmpty()) {
+                    var match = matches.get(0);
+                    record.setLatitude(BigDecimal.valueOf(match.getCoordinates().getY()));
+                    record.setLongitude(BigDecimal.valueOf(match.getCoordinates().getX()));
+                    return true;
+                }
             }
         } catch (Exception e) {
             log.warn("Census geocode failed for {}: {}", addr, e.getMessage());
         }
-        return record.getLatitude() != null && record.getLongitude() != null;
+        return (record.getLatitude() != null && record.getLongitude() != null);
     }
 
     private boolean tryUtahGeocode(RealEstateCsvRecord record, String address, String zip) {
@@ -275,30 +427,59 @@ public class RealEstateCsvService {
         } catch (Exception e) {
             log.warn("Utah geocode failed for {}, zip {}: {}", address, zip, e.getMessage());
         }
-        return record.getLatitude() != null && record.getLongitude() != null;
+        return (record.getLatitude() != null && record.getLongitude() != null);
     }
 
-    private void skipRow(List<RealEstateCsvErrorDto> errorList,
-                         List<String[]> unsavedRows,
-                         String[] row,
-                         Map<String, Integer> headerMap,
-                         int rowNum,
-                         String mlsNumber,
-                         String reason) {
-        log.warn("Skipping row {}: {}", rowNum, reason);
+    /* ========================================================================
+       Error Handling
+       ======================================================================== */
 
+    private void skipRow(
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows,
+            String[] row,
+            Map<String, Integer> headerMap,
+            int rowNum,
+            String mlsNumber,
+            String reason
+    ) {
+        log.warn("Skipping row {}: {}", rowNum, reason);
+        addErrorAndRow(row, headerMap, rowNum, reason, errorList, unsavedRows, mlsNumber);
+    }
+
+    private void addErrorAndRow(
+            String[] row,
+            Map<String, Integer> headerMap,
+            int rowNum,
+            String reason,
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows
+    ) {
+        addErrorAndRow(row, headerMap, rowNum, reason, errorList, unsavedRows, null);
+    }
+
+    private void addErrorAndRow(
+            String[] row,
+            Map<String, Integer> headerMap,
+            int rowNum,
+            String reason,
+            List<RealEstateCsvErrorDto> errorList,
+            List<String[]> unsavedRows,
+            String mlsNumber
+    ) {
         RealEstateCsvErrorDto errorDto = buildErrorDto(row, headerMap, rowNum, reason);
         errorDto.setMlsNumber(mlsNumber);
-
         errorList.add(errorDto);
         unsavedRows.add(row);
     }
 
-    private RealEstateCsvErrorDto buildErrorDto(String[] row,
-                                                Map<String, Integer> headerMap,
-                                                int rowIndex,
-                                                String message) {
-        var dto = new RealEstateCsvErrorDto();
+    private RealEstateCsvErrorDto buildErrorDto(
+            String[] row,
+            Map<String, Integer> headerMap,
+            int rowIndex,
+            String message
+    ) {
+        RealEstateCsvErrorDto dto = new RealEstateCsvErrorDto();
         dto.setRowNumber(rowIndex);
 
         String address = getCellValue(row, headerMap, "address");
@@ -306,13 +487,15 @@ public class RealEstateCsvService {
         String state = getCellValue(row, headerMap, "state");
         String zip = getCellValue(row, headerMap, "zip");
 
-        String combinedAddr = address + ", " + city + ", " + state + ", " + zip;
-        String fullAddress = getCellValue(row, headerMap, "Full Address");
-        System.out.println("ADDRESS: Full address: " + fullAddress);
-        System.out.println("ADDRESS: Combined address: " + combinedAddr);
-        dto.setAddress(fullAddress != null && !fullAddress.isEmpty()
-                ? fullAddress : combinedAddr);
+        String combinedAddr = String.join(", ",
+                nullSafe(address), nullSafe(city),
+                nullSafe(state), nullSafe(zip)
+        );
+        String fullAddress = getCellValue(row, headerMap, "full address");
 
+        dto.setAddress((fullAddress != null && !fullAddress.isBlank())
+                ? fullAddress
+                : combinedAddr);
         dto.setErrorMessage(message);
         return dto;
     }
@@ -324,5 +507,17 @@ public class RealEstateCsvService {
             return null;
         }
         return row[idx];
+    }
+
+    /* ========================================================================
+       Helper Classes
+       ======================================================================== */
+
+    private static class ParsedCsvData {
+        int totalRows;
+        String[] headerRow;
+        Map<String, Integer> headerMap;
+        List<RowData> rowsMissingLatLng;
+        List<RowData> rowsWithLatLng;
     }
 }

@@ -4,9 +4,11 @@ import com.example.realestate.dto.upload.RealEstateCsvUploadResult;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.concurrent.Future;
+
 /**
  * Holds data about a single CSV processing task, including
- * status, result, and error messages.
+ * status, result, error messages, and now the Future (for cancellation).
  */
 @Data
 public class RealEstateCsvProcessingTask {
@@ -15,6 +17,9 @@ public class RealEstateCsvProcessingTask {
     private RealEstateCsvTaskStatus status;
     private RealEstateCsvUploadResult result;
     private String errorMessage;
+
+    // We store the Future so we can call cancel(true)
+    private Future<?> future;
 
     public RealEstateCsvProcessingTask(MultipartFile file) {
         this.file = file;

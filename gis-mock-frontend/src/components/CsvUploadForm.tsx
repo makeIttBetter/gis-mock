@@ -1,7 +1,20 @@
 "use client";
-import React, {useEffect, useRef, useState} from "react";
-import {getCsvUploadStatus, RealEstateCsvProcessingStatusDto, uploadCsvFile,} from "@/lib/realEstateCsvApi";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    getCsvUploadStatus,
+    RealEstateCsvProcessingStatusDto,
+    uploadCsvFile,
+    abortCsvProcessing,
+} from "@/lib/realEstateCsvApi";
 
+/**
+ * A functional component that allows the user to:
+ * - Select a file
+ * - Upload it
+ * - See real-time progress (rows processed out of total)
+ * - Possibly abort (cancel) the upload mid-process
+ * - See final results
+ */
 const CsvUploadForm: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<RealEstateCsvProcessingStatusDto | null>(null);
@@ -11,7 +24,7 @@ const CsvUploadForm: React.FC = () => {
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     /**
-     * Called when user selects a file.
+     * Called when user selects a file from <input type="file" />
      */
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -33,9 +46,8 @@ const CsvUploadForm: React.FC = () => {
 
             // Because we know a task just started,
             // we set an initial status with inProgress: true
-            // or we can just call fetchStatus() once:
+            // then start polling
             fetchStatus();
-            // then keep polling
             startPolling();
         } catch (error: any) {
             console.error("Upload error:", error);
@@ -87,7 +99,7 @@ const CsvUploadForm: React.FC = () => {
     };
 
     /**
-     * On mount (and on refresh), do an **initial** check for any active tasks.
+     * On mount (and on refresh), do an initial check for any active tasks.
      */
     useEffect(() => {
         fetchStatus(); // Checks if a task is in progress
@@ -99,10 +111,24 @@ const CsvUploadForm: React.FC = () => {
     }, []);
 
     /**
-     * Used to download unsaved rows as CSV if available.
+     * Attempt to abort (cancel) the current processing.
+     */
+    const handleAbort = async () => {
+        try {
+            await abortCsvProcessing();
+            // Immediately fetch status to see if it was aborted
+            fetchStatus();
+        } catch (err) {
+            console.error("Failed to abort CSV:", err);
+            alert("Failed to abort CSV: " + (err as Error).message);
+        }
+    };
+
+    /**
+     * Helper to download unsaved rows as CSV, if available.
      */
     const handleDownloadNotSavedRows = () => {
-        if (!status?.result?.headerRow || !status.result.unsavedRows) return;
+        if (!status?.result?.headerRow || !status.result?.unsavedRows) return;
 
         const lines: string[] = [];
         const headerLine = status.result.headerRow.map(escapeCsv).join(",");
@@ -114,7 +140,7 @@ const CsvUploadForm: React.FC = () => {
         }
 
         const csvContent = lines.join("\n");
-        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement("a");
@@ -126,7 +152,7 @@ const CsvUploadForm: React.FC = () => {
     };
 
     /**
-     * Simple CSV escaping
+     * Basic CSV escaping function.
      */
     function escapeCsv(value: string) {
         if (!value) return "";
@@ -135,15 +161,18 @@ const CsvUploadForm: React.FC = () => {
         return mustQuote ? `"${escaped}"` : escaped;
     }
 
-    /**
-     * Decide if user can upload:
-     * - no status,
-     * - or status.inProgress is false,
-     * - or status.success is false and no errorMessage
-     */
+    // Decide if user can upload:
+    // - no status,
+    // - or status.inProgress is false,
+    // - or status.success is false and no errorMessage
     const canUpload =
         !status ||
         (!status.inProgress && !status.success && !status.errorMessage);
+
+    // For the progress bar
+    const totalRows = status?.result?.totalRows ?? 0;
+    const processedRows = status?.result?.processedRows ?? 0;
+    const percentage = totalRows > 0 ? Math.floor((processedRows / totalRows) * 100) : 0;
 
     return (
         <div className="bg-white p-4 rounded shadow">
@@ -165,13 +194,40 @@ const CsvUploadForm: React.FC = () => {
                 >
                     {loading ? "Uploading..." : "Upload"}
                 </button>
+
+                {/* Show ABORT button if a file is in progress */}
+                {status?.inProgress && (
+                    <button
+                        type="button"
+                        onClick={handleAbort}
+                        className="px-4 py-2 bg-red-600 text-white rounded ml-2"
+                    >
+                        Abort
+                    </button>
+                )}
             </form>
 
             {/* Status display if we have a status object */}
             {status && (
                 <div className="mt-4">
-                    {status.inProgress && <p>Processing is in progress. Please wait...</p>}
+                    {/* If still in progress, show real-time progress */}
+                    {status.inProgress && status.result && (
+                        <div className="mb-2">
+                            <p>
+                                Processing... {status.result.processedRows} of {status.result.totalRows} rows complete.
+                            </p>
+                            {totalRows > 0 && (
+                                <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
+                                    <div
+                                        className="bg-blue-500 h-4 rounded-full"
+                                        style={{ width: `${percentage}%` }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
 
+                    {/* If completed successfully, display the result */}
                     {status.success && status.result && (
                         <div className="mt-4">
                             <h2 className="text-xl font-semibold">Upload Summary</h2>
@@ -228,6 +284,7 @@ const CsvUploadForm: React.FC = () => {
                         </div>
                     )}
 
+                    {/* If finished or in-progress but there's an error */}
                     {!status.inProgress && status.errorMessage && (
                         <div className="text-red-500 mt-4">
                             <p>Processing failed with error:</p>
