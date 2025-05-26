@@ -22,6 +22,7 @@ export default function RealEstateFilterPanel({filters, onChange}: Props) {
     const {options: cityOptions} = useFilterOptions("city");
     const {options: stateOptions} = useFilterOptions("state");
     const {options: statusOptions} = useFilterOptions("status");
+    const {options: propertyTypeOptions} = useFilterOptions("propertyType");
 
     // Basic change handler
     const handleInputChange = (
@@ -183,7 +184,7 @@ export default function RealEstateFilterPanel({filters, onChange}: Props) {
                     <div>
                         <label className="block text-sm font-medium mb-1">Property Type</label>
                         <TagMultiSelect
-                            availableOptions={[] /* loaded from backend? */}
+                            availableOptions={propertyTypeOptions} // use the hook result here
                             selectedValues={localFilters.propertyTypes || []}
                             onChange={(vals) => handleTagMultiSelectChange("propertyTypes", vals)}
                             placeholder="Select property types..."

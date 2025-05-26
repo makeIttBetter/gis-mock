@@ -4,6 +4,7 @@ import com.example.realestate.dto.RealEstateFilterDto;
 import com.example.realestate.dto.RealEstateMapDto;
 import com.example.realestate.dto.model.PaginatedResponseDto;
 import com.example.realestate.dto.model.RealEstateDto;
+import com.example.realestate.dto.model.RealEstateIdsRequest;
 import com.example.realestate.dto.model.RealEstateUpdateDto;
 import com.example.realestate.service.RealEstateService;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -83,10 +83,13 @@ public class RealEstateController {
     /**
      * The attached endpoint for reference (unchanged).
      */
-    @GetMapping("/attached")
-    public ResponseEntity<List<RealEstateDto>> getAttachedRealEstate(@RequestParam("ids") String ids) {
-        log.info("GET /api/real-estate/attached with ids: {}", ids);
-        List<String> idList = Arrays.asList(ids.split(","));
+    @PostMapping("/attached")
+    public ResponseEntity<List<RealEstateDto>> getAttachedRealEstatePost(
+            @RequestBody RealEstateIdsRequest payload
+    ) {
+        List<String> idList = payload.getIds();
+        log.info("POST /api/real-estate/attached with ids: {}", idList);
+
         List<RealEstateDto> attachedRecords = realEstateService.getRealEstateByIds(idList);
         return ResponseEntity.ok(attachedRecords);
     }

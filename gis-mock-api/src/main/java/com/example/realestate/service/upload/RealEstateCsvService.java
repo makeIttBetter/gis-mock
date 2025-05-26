@@ -28,6 +28,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -300,6 +304,8 @@ public class RealEstateCsvService {
         RealEstateCsvRecord rec = rowData.getRecord();
         int rowNum = rowData.getRowNumber();
 
+        normaliseAddressFields(rec); // Ensure address fields are normalised
+
         try {
             // 1) Skip if verified
             if (Boolean.TRUE.equals(rec.getVerified())) {
@@ -382,13 +388,62 @@ public class RealEstateCsvService {
                 "%s, %s, %s, %s",
                 nullSafe(rec.getAddress()),
                 nullSafe(rec.getCity()),
-                nullSafe(rec.getState()),
+                nullSafe(rec.getState() == null || rec.getState().isEmpty()
+                        ? "UT" : rec.getState().toUpperCase()),
                 nullSafe(rec.getZip())
         ).replaceAll(", null", "").replaceAll("null,", "").trim();
 
         return (rec.getFullAddress() == null || rec.getFullAddress().isEmpty())
                 ? combined
                 : rec.getFullAddress().trim();
+    }
+
+    /**
+     * Normalises address-related fields on a record **in-place**.
+     * - Fills address/zip from fullAddress if missing.
+     * - Builds fullAddress from pieces if it is blank.
+     */
+    private void normaliseAddressFields(RealEstateCsvRecord rec) {
+
+        String city = Optional.ofNullable(rec.getCity()).orElse("").trim();
+        String full = Optional.ofNullable(rec.getFullAddress()).orElse("").trim();
+        String state = rec.getState() == null || rec.getState().isEmpty()
+                ? "UT" : rec.getState().toUpperCase().trim();
+
+        rec.setState(state); // Ensure state is always set
+    /* -----------------------------------------------------------------
+       A) fullAddress present  ➜  derive missing pieces
+       ----------------------------------------------------------------- */
+        if (!full.isEmpty()) {
+
+            /* ZIP */
+            if (rec.getZip() == null || rec.getZip().isBlank()) {
+                // last ZIP-code looking chunk in the string (5 or 9 digits)
+                Matcher m = Pattern.compile("\\b\\d{5}(?:-\\d{4})?\\b").matcher(full);
+                String lastZip = null;
+                while (m.find()) lastZip = m.group();          // keep last match
+                if (lastZip != null) rec.setZip(lastZip);
+            }
+
+            /* Street address */
+            if (rec.getAddress() == null || rec.getAddress().isBlank()) {
+                int idx = full.toLowerCase().indexOf(city.toLowerCase());
+                if (idx > 0) {
+                    String beforeCity = full.substring(0, idx).replaceAll("[,\\s]+$", "");
+                    if (!beforeCity.isBlank()) rec.setAddress(beforeCity);
+                }
+            }
+        }
+
+    /* -----------------------------------------------------------------
+       B) fullAddress missing  ➜  build from parts
+       ----------------------------------------------------------------- */
+        if (rec.getFullAddress() == null || rec.getFullAddress().isBlank()) {
+            String built = Stream.of(rec.getAddress(), city, rec.getState(), rec.getZip())
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(Collectors.joining(" "));
+            if (!built.isBlank()) rec.setFullAddress(built);
+        }
     }
 
     private String nullSafe(String val) {

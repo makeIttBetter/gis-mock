@@ -1,7 +1,7 @@
 // File: src/lib/realEstateApi.ts
 "use client";
 
-import {apiGet} from "@/lib/api";
+import {apiGet, apiPost} from "@/lib/api";
 import {RealEstate} from "@/interfaces/RealEstate";
 import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
 import {PaginatedResponse} from "@/interfaces/PaginatedResponse";
@@ -20,10 +20,8 @@ export async function fetchRealEstateData(
 /**
  * Fetch attached real estate data by a list of IDs.
  */
-export async function fetchAttachedRealEstate(
-    ids: string[]
-): Promise<RealEstate[]> {
-    return apiGet<RealEstate[]>("REAL_ESTATE_ATTACHED", {ids: ids.join(",")});
+export async function fetchAttachedRealEstate(ids: string[]): Promise<RealEstate[]> {
+    return apiPost<RealEstate[]>("REAL_ESTATE_ATTACHED", {ids});
 }
 
 /**
