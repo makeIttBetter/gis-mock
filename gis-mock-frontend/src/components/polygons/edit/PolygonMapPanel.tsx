@@ -1,21 +1,25 @@
+// File: src/components/polygons/edit/PolygonMapPanel.tsx
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-import React, {useRef, useState} from "react";
-import {
-    GoogleMap,
-    InfoWindow,
-    Marker as AdvancedMarkerElement,
-    Polygon as MapPolygon,
-    useLoadScript
-} from "@react-google-maps/api";
+
+import React, {useCallback, useEffect, useRef, useState} from "react";
+import {GoogleMap, InfoWindow, Polygon as MapPolygon, useLoadScript,} from "@react-google-maps/api";
 import {PolygonDTO} from "@/interfaces/PolygonDTO";
 import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
 import RealEstateMarkerInfo from "@/components/realestate/RealEstateMarkerInfo";
 import {RealEstateMarkerInfoMode} from "@/components/realestate/RealEstateMarkerInfoMode";
 import {RealEstateFilterParams} from "@/interfaces/RealEstateFilterParams";
+import debounce from "lodash.debounce";
 
-/**
- * Props for the polygon map editing panel.
- */
+/* ------------------------------------------------------------------ */
+/* Persist camera centre across un-mounts                             */
+/* ------------------------------------------------------------------ */
+let globalCenter: google.maps.LatLngLiteral | null = null;
+
+/* ------------------------------------------------------------------ */
+/* Component props                                                    */
+
+/* ------------------------------------------------------------------ */
 interface PolygonMapPanelProps {
     polygon: PolygonDTO;
     polygonName: string;
@@ -24,18 +28,21 @@ interface PolygonMapPanelProps {
     onToggleAttachment: (marker: RealEstateMapDto) => void;
 
     showNotAttached: boolean;
-    setShowNotAttached: (val: boolean) => void;
+    setShowNotAttached: (v: boolean) => void;
     showAttached: boolean;
-    setShowAttached: (val: boolean) => void;
+    setShowAttached: (v: boolean) => void;
 
-    onSavePolygon: (newCoords?: { lat: number; lng: number }[]) => void;
+    onSavePolygon: (coords?: { lat: number; lng: number }[]) => void;
 
-    filters: RealEstateFilterParams;
+    filters: RealEstateFilterParams; // kept for future use
     setFilters: (f: RealEstateFilterParams) => void;
 
     isUpdating: boolean;
 }
 
+/* ------------------------------------------------------------------ */
+/* Main component                                                     */
+/* ------------------------------------------------------------------ */
 export default function PolygonMapPanel({
                                             polygon,
                                             polygonName,
@@ -49,7 +56,6 @@ export default function PolygonMapPanel({
                                             setShowAttached,
 
                                             onSavePolygon,
-
                                             isUpdating,
                                         }: PolygonMapPanelProps) {
     const {isLoaded} = useLoadScript({
@@ -57,43 +63,92 @@ export default function PolygonMapPanel({
         libraries: ["drawing", "geometry"],
     });
 
+    /* ---------------- refs ---------------- */
+    const mapRef = useRef<google.maps.Map | null>(null);
     const polygonRef = useRef<google.maps.Polygon | null>(null);
-    const [selectedMarker, setSelectedMarker] = useState<RealEstateMapDto | null>(null);
+    const markerPool = useRef<google.maps.Marker[]>([]);
 
-    if (!isLoaded) {
-        return <div>Loading Google Maps...</div>;
-    }
+    /* ---------------- state --------------- */
+    const [selected, setSelected] = useState<RealEstateMapDto | null>(null);
+    const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral>(() => {
+        if (globalCenter) return globalCenter;
+        const path = polygon.coordinates ?? [];
+        return path.length ? {lat: path[0].lat, lng: path[0].lng} : {lat: 40.114955, lng: -111.654923};
+    });
 
-    // In case the polygon has no coordinates
-    const path = polygon.coordinates || [];
-    let mapCenter = {lat: 40.114955, lng: -111.654923};
-    if (path.length > 0) {
-        mapCenter = {lat: path[0].lat, lng: path[0].lng};
-    }
+    /* ------------------------------------------------------------------ */
+    /* Marker pool – only what is visible                                 */
+    /* ------------------------------------------------------------------ */
+    const rebuildMarkers = useCallback(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const bounds = map.getBounds();
+        if (!bounds) return;
 
-    // Gather final displayed markers from "displayedRealEstates" directly
+        // Clear previous markers
+        markerPool.current.forEach((m) => m.setMap(null));
+        markerPool.current = [];
 
-    function handleSave() {
-        if (!polygonRef.current) {
-            onSavePolygon();
-            return;
+        displayedRealEstates.forEach((re) => {
+            if (
+                re.latitude == null ||
+                re.longitude == null ||
+                !bounds.contains(new google.maps.LatLng(re.latitude, re.longitude))
+            )
+                return;
+
+            const marker = new google.maps.Marker({
+                position: {lat: re.latitude, lng: re.longitude},
+                map,
+                icon: {
+                    url: attachedSet.has(re.id) ? "/yellow-dot.png" : "/red-dot.png",
+                },
+                title: re.mlsNumber ?? "",
+            });
+            marker.addListener("click", () => setSelected(re));
+            markerPool.current.push(marker);
+        });
+    }, [displayedRealEstates, attachedSet]);
+
+    const rebuildMarkersDebounced = useCallback(debounce(rebuildMarkers, 250), [
+        rebuildMarkers,
+    ]);
+
+    useEffect(() => {
+        if (isLoaded && mapRef.current) rebuildMarkers();
+    }, [isLoaded, rebuildMarkers]);
+
+    /* ------------------------------------------------------------------ */
+    /* Helpers                                                            */
+    /* ------------------------------------------------------------------ */
+    const readPolygonCoords = () => {
+        if (!polygonRef.current) return undefined;
+        const path = polygonRef.current.getPath();
+        if (path.getLength() < 3) return undefined;
+        const coords: { lat: number; lng: number }[] = [];
+        for (let i = 0; i < path.getLength(); i++) {
+            const pt = path.getAt(i);
+            coords.push({lat: pt.lat(), lng: pt.lng()});
         }
-        // Read path from the polygonRef
-        const newCoords: { lat: number; lng: number }[] = [];
-        const polygonPath = polygonRef.current.getPath();
-        for (let i = 0; i < polygonPath.getLength(); i++) {
-            const pt = polygonPath.getAt(i);
-            newCoords.push({lat: pt.lat(), lng: pt.lng()});
-        }
-        onSavePolygon(newCoords);
-    }
+        return coords;
+    };
 
+    const handleSave = () => {
+        onSavePolygon(readPolygonCoords());
+    };
+
+    /* ------------------------------------------------------------------ */
+    /* Render                                                             */
+    /* ------------------------------------------------------------------ */
+    if (!isLoaded) return <div>Loading Google Maps...</div>;
+
+    const path = polygon.coordinates ?? [];
 
     return (
         <div className="bg-white p-4 rounded shadow">
             <h2 className="text-lg font-semibold mb-2">Polygon Editor: {polygonName}</h2>
 
-            {/* Toggles for attached vs not-attached */}
+            {/* toggles */}
             <div className="flex gap-4 mb-2">
                 <label className="flex items-center">
                     <input
@@ -113,91 +168,82 @@ export default function PolygonMapPanel({
                 </label>
             </div>
 
-            {/* The Map */}
-            <div style={{width: "100%", height: "500px"}} className="border rounded overflow-hidden">
+            {/* map ---------------------------------------------------------- */}
+            <div style={{width: "100%", height: 500}} className="border rounded overflow-hidden">
                 <GoogleMap
                     mapContainerStyle={{width: "100%", height: "100%"}}
                     center={mapCenter}
                     zoom={10}
+                    onLoad={(m) => {
+                        mapRef.current = m; // returns void
+                    }}
+                    onIdle={() => {
+                        const c = mapRef.current?.getCenter();
+                        if (c) {
+                            const nc = {lat: c.lat(), lng: c.lng()};
+                            setMapCenter(nc);
+                            globalCenter = nc;
+                        }
+                        rebuildMarkersDebounced();
+                    }}
                 >
                     {path.length > 2 && (
                         <MapPolygon
                             paths={path}
                             editable
+                            onLoad={(poly) => (polygonRef.current = poly)}
                             options={{
                                 fillColor: "#00FF00",
                                 fillOpacity: 0.3,
                                 strokeColor: "#00FF00",
                                 strokeWeight: 2,
                             }}
-                            onLoad={(poly) => (polygonRef.current = poly)}
                         />
                     )}
 
-                    {displayedRealEstates.map((re) => {
-                        if (re.latitude == null || re.longitude == null) return null;
-                        const isAttached = attachedSet.has(re.id);
-
-                        return (
-                            <AdvancedMarkerElement
-                                key={re.id}
-                                position={{lat: re.latitude, lng: re.longitude}}
-                                icon={{
-                                    url: isAttached ? "/yellow-dot.png" : "/red-dot.png",
-                                }}
-                                onClick={() => setSelectedMarker(re)}
-                            />
-                        );
-                    })}
-
-                    {selectedMarker && selectedMarker.latitude !== null && selectedMarker.longitude !== null && (
+                    {/* InfoWindow */}
+                    {selected && selected.latitude != null && selected.longitude != null && (
                         <InfoWindow
-                            position={{
-                                lat: selectedMarker.latitude || 0,
-                                lng: selectedMarker.longitude || 0,
-                            }}
-                            // position={{lat: selectedMarker.latitude, lng: selectedMarker.longitude}}
-                            onCloseClick={() => setSelectedMarker(null)}
+                            position={{lat: selected.latitude, lng: selected.longitude}}
+                            onCloseClick={() => setSelected(null)}
                         >
-                            <div>
-                                <RealEstateMarkerInfo
-                                    realEstate={{
-                                        id: selectedMarker.id,
-                                        mlsNumber: selectedMarker.mlsNumber || "",
-                                        soldTerms: selectedMarker.soldTerms || "",
-                                        soldPrice: selectedMarker.soldPrice || "",
-                                        taxId: selectedMarker.taxId || "",
-                                        address: selectedMarker.address || "",
-                                        city: selectedMarker.city || "",
-                                        state: selectedMarker.state || "",
-                                        zip: selectedMarker.zip || "",
-                                        status: selectedMarker.status || "",
-                                        listPrice: "",
-                                        latitude: String(selectedMarker.latitude),
-                                        longitude: String(selectedMarker.longitude),
-                                    }}
-                                    isAttached={attachedSet.has(selectedMarker.id)}
-                                    onToggleAttachment={() => {
-                                        onToggleAttachment(selectedMarker);
-                                        setSelectedMarker(null);
-                                    }}
-                                    onClose={() => setSelectedMarker(null)}
-                                    mode={RealEstateMarkerInfoMode.POLYGON_EDIT_PAGE}
-                                />
-                            </div>
+                            <RealEstateMarkerInfo
+                                realEstate={{
+                                    id: selected.id,
+                                    mlsNumber: selected.mlsNumber ?? "",
+                                    soldTerms: selected.soldTerms ?? "",
+                                    soldPrice: selected.soldPrice ?? "",
+                                    taxId: selected.taxId ?? "",
+                                    address: selected.address ?? "",
+                                    city: selected.city ?? "",
+                                    state: selected.state ?? "",
+                                    zip: selected.zip ?? "",
+                                    status: selected.status ?? "",
+                                    listPrice: "",
+                                    latitude: String(selected.latitude),
+                                    longitude: String(selected.longitude),
+                                }}
+                                isAttached={attachedSet.has(selected.id)}
+                                onToggleAttachment={() => {
+                                    onToggleAttachment(selected);
+                                    setSelected(null);
+                                }}
+                                onClose={() => setSelected(null)}
+                                mode={RealEstateMarkerInfoMode.POLYGON_EDIT_PAGE}
+                            />
                         </InfoWindow>
                     )}
                 </GoogleMap>
             </div>
 
-            {/* Save Button */}
-            <div className="flex justify-center mt-4 items-center">
+            {/* save button -------------------------------------------------- */}
+            <div className="flex justify-center mt-4">
                 <button
                     onClick={handleSave}
                     disabled={isUpdating}
                     className="px-6 py-3 bg-blue-600 text-white text-lg rounded hover:bg-blue-700"
                 >
-                    {isUpdating ? "Saving..." : "Save Changes to Polygon"}
+                    {isUpdating ? "Saving…" : "Save Changes to Polygon"}
                 </button>
             </div>
         </div>

@@ -1,20 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 import Link from "next/link";
-import { PolygonDTO } from "@/interfaces/PolygonDTO";
-import { RealEstate } from "@/interfaces/RealEstate";
-import {
-    fetchPolygons,
-    deletePolygon,
-    exportPolygonCsv,
-} from "@/lib/polygonApi";
-import { fetchAttachedRealEstate } from "@/lib/realEstateApi";
+import {PolygonDTO} from "@/interfaces/PolygonDTO";
+import {RealEstate} from "@/interfaces/RealEstate";
+import {deletePolygon, exportPolygonCsv, fetchPolygons,} from "@/lib/polygonApi";
+import {fetchAttachedRealEstate} from "@/lib/realEstateApi";
 import {
     checkGoogleAuthStatus,
-    startGoogleOAuthFlow,
-    exportPolygonToGoogleSheets,
     exportMultiplePolygonsToGoogleSheets,
+    exportPolygonToGoogleSheets,
+    startGoogleOAuthFlow,
 } from "@/lib/googleApi";
 
 /**
@@ -60,9 +56,11 @@ export default function PolygonListPanel() {
         function handlePolygonCreated() {
             loadData();
         }
+
         function handlePolygonDeleted() {
             loadData();
         }
+
         window.addEventListener("polygonCreated", handlePolygonCreated);
         window.addEventListener("polygonDeleted", handlePolygonDeleted);
 
@@ -146,7 +144,8 @@ export default function PolygonListPanel() {
         if (!window.confirm("Export this polygon's data to Google Sheets?")) return;
         try {
             setExportLoadingId(polygonId);
-            await exportPolygonToGoogleSheets(polygonId);
+            const resp = await exportPolygonToGoogleSheets(polygonId);
+            alert(resp.message);
         } catch (error) {
             console.error("Export to Google Sheets failed:", error);
             alert("Failed to export to Google Sheets");
@@ -171,8 +170,8 @@ export default function PolygonListPanel() {
         if (!sheetName) return;
         try {
             setExportMultipleLoading(true);
-            await exportMultiplePolygonsToGoogleSheets(selectedPolygonIds, sheetName);
-            alert("Polygons exported to Google Sheets");
+            const resp = await exportMultiplePolygonsToGoogleSheets(selectedPolygonIds, sheetName);
+            alert(resp.message);
         } catch (error) {
             console.error("Export multiple polygons failed:", error);
             alert("Failed to export polygons to Google Sheets");

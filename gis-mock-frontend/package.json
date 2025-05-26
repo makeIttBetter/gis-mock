@@ -9,14 +9,18 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@googlemaps/markerclusterer": "^2.5.3",
     "@react-google-maps/api": "^2.20.3",
-    "axios": "^1.7.9",
-    "next": "15.1.4",
+    "@react-google-maps/marker-clusterer": "^2.20.0",
+    "axios": "1.8.2",
+    "lodash.debounce": "^4.0.8",
+    "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^20.17.16",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -49,6 +49,29 @@ public class RealEstateSpecification {
         };
     }
 
+    private static Predicate applyBoundingBoxFilter(
+            Predicate predicate,
+            Root<RealEstate> root,
+            CriteriaBuilder cb,
+            RealEstateFilterDto filter) {
+
+        if (filter.getMinLat() != null &&
+                filter.getMaxLat() != null &&
+                filter.getMinLng() != null &&
+                filter.getMaxLng() != null) {
+
+            predicate = cb.and(
+                    predicate,
+                    cb.between(root.get("latitude"),
+                            filter.getMinLat(), filter.getMaxLat()),
+                    cb.between(root.get("longitude"),
+                            filter.getMinLng(), filter.getMaxLng())
+            );
+        }
+        return predicate;
+    }
+
+
     // ------------------------------------------------------------------
     // Below are private helpers for each filter piece
     // ------------------------------------------------------------------

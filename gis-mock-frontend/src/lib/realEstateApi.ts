@@ -47,8 +47,12 @@ export async function fetchRealEstateMapData(
     polygonId?: string
 ): Promise<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }> {
     const params = { ...filters, polygonId };
-    return apiGet<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }>("REAL_ESTATE_MAP", params);
+    return apiGet<{ filtered: RealEstateMapDto[]; attached: RealEstateMapDto[] }>(
+        "REAL_ESTATE_MAP",
+        params
+    );
 }
+
 
 /**
  * PartialUpdate a RealEstate by ID.

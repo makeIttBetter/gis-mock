@@ -21,4 +21,9 @@ export interface RealEstateFilterParams {
     basementFinished?: boolean;
     daysBackMin?: number;
     daysBackMax?: number;
+
+    minLat?: number;
+    maxLat?: number;
+    minLng?: number;
+    maxLng?: number;
 }

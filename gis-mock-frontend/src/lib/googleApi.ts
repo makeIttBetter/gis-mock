@@ -1,31 +1,38 @@
+/**
+ * src/lib/googleApi.ts
+ *
+ * Front-end helpers for Google OAuth and Google-Sheets export.
+ * All tokens live on the backend – the browser only invokes the
+ * endpoints and relays success / failure to the UI.
+ */
+"use client";
+
 import {apiPost} from "@/lib/api";
 import {API_ENDPOINTS} from "@/config";
 
-/**
- * Front-end helpers for Google OAuth & Sheets export.
- * Tokens live only on the backend – we just ask “is it valid?”.
- */
+/* ------------------------------------------------------------------ */
+/* OAuth helpers                                                      */
+
+/* ------------------------------------------------------------------ */
+
 export interface GoogleAuthStatus {
-    valid: boolean
+    valid: boolean;
 }
 
-/* ---------- STEP 1 – open popup & LOG the URL ---------- */
-export function startGoogleOAuthFlow() {
+export function startGoogleOAuthFlow(): void {
     const authUrl = API_ENDPOINTS.GOOGLE_OAUTH_AUTHORIZE;
-    console.log("[Google OAuth] opening authorization URL →", authUrl);
-
-    const w = 600, h = 700;
+    const w = 600,
+        h = 700;
     const left = window.screenX + (window.outerWidth - w) / 2;
     const top = window.screenY + (window.outerHeight - h) / 2;
 
     window.open(
         authUrl,
         "google-oauth",
-        `width=${w},height=${h},left=${left},top=${top}`
+        `width=${w},height=${h},left=${left},top=${top}`,
     );
 }
 
-/* ---------- STEP 3 – token validity ---------- */
 export async function checkGoogleAuthStatus(): Promise<boolean> {
     try {
         const res = await fetch(API_ENDPOINTS.GOOGLE_OAUTH_VERIFY, {
@@ -39,15 +46,32 @@ export async function checkGoogleAuthStatus(): Promise<boolean> {
     }
 }
 
-/* ---------- Export polygon ---------- */
-export async function exportPolygonToGoogleSheets(polygonId: string): Promise<void> {
-    await apiPost("GOOGLE_EXPORT_SHEETS", {polygonId});
+/* ------------------------------------------------------------------ */
+/* Sheets export helpers                                              */
+
+/* ------------------------------------------------------------------ */
+
+export interface GoogleSheetsExportResponse {
+    /** human-readable status from the backend */
+    message: string;
 }
 
-/* ---------- Export multiple polygons ---------- */
+/** Export a single polygon’s data to Google Sheets. */
+export async function exportPolygonToGoogleSheets(
+    polygonId: string,
+): Promise<GoogleSheetsExportResponse> {
+    return apiPost<GoogleSheetsExportResponse>("GOOGLE_EXPORT_SHEETS", {
+        polygonId,
+    });
+}
+
+/** Export multiple polygons to one sheet. */
 export async function exportMultiplePolygonsToGoogleSheets(
     polygonIds: string[],
-    sheetName: string
-): Promise<void> {
-    await apiPost("GOOGLE_EXPORT_SHEETS_MULTIPLE", { polygonIds, sheetName });
+    sheetName: string,
+): Promise<GoogleSheetsExportResponse> {
+    return apiPost<GoogleSheetsExportResponse>("GOOGLE_EXPORT_SHEETS_MULTIPLE", {
+        polygonIds,
+        sheetName,
+    });
 }

@@ -1,23 +1,26 @@
+// File: src/components/map/RealEstateMap.tsx
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-import React, {CSSProperties, useCallback, useRef, useState} from "react";
-import {
-    DrawingManager,
-    GoogleMap,
-    InfoWindow,
-    Marker as AdvancedMarkerElement,
-    Polygon as MapPolygon,
-    useLoadScript,
-} from "@react-google-maps/api";
+
+import React, {CSSProperties, useCallback, useEffect, useRef, useState,} from "react";
+import {DrawingManager, GoogleMap, InfoWindow, Polygon as MapPolygon, useLoadScript,} from "@react-google-maps/api";
+import debounce from "lodash.debounce";
 import {RealEstateMapDto} from "@/interfaces/RealEstateMapDto";
 import RealEstateMarkerInfo from "@/components/realestate/RealEstateMarkerInfo";
 import {RealEstateMarkerInfoMode} from "@/components/realestate/RealEstateMarkerInfoMode";
 
-const LIBRARIES: ("drawing" | "geometry" | "places" | "visualization")[] = [
-    "drawing",
-    "geometry",
-];
+/* ------------------------------------------------------------------ */
+/* Constants                                                          */
+/* ------------------------------------------------------------------ */
 
+const LIBRARIES: ("drawing" | "geometry")[] = ["drawing", "geometry"];
+/** Persists last camera position among component un-mounts            */
 let globalCenter: google.maps.LatLngLiteral | null = null;
+
+/* ------------------------------------------------------------------ */
+/* Types                                                              */
+
+/* ------------------------------------------------------------------ */
 
 export interface RealEstateMapProps {
     realEstates: RealEstateMapDto[];
@@ -26,28 +29,31 @@ export interface RealEstateMapProps {
     zoom?: number;
     containerStyle?: CSSProperties;
 
-    displayPolygon?: {
-        coordinates: { lat: number; lng: number }[];
-    };
+    displayPolygon?: { coordinates: { lat: number; lng: number }[] };
     editablePolygon?: {
         coordinates: { lat: number; lng: number }[];
         realEstateObjects: string[];
     };
-    onUpdatePolygon?: (updatedPolygon: {
+
+    onUpdatePolygon?: (payload: {
         coordinates: { lat: number; lng: number }[];
         realEstateIds: string[];
     }) => void;
-    onCreatePolygon?: (newPolygon: {
+
+    onCreatePolygon?: (payload: {
         name: string;
         coordinates: { lat: number; lng: number }[];
         realEstateIds: string[];
     }) => void;
 }
 
+/* ------------------------------------------------------------------ */
+/* Component                                                          */
+/* ------------------------------------------------------------------ */
+
 export default function RealEstateMap({
                                           realEstates,
                                           attachedIds,
-                                          // keep your old default
                                           center = {lat: 40.114955, lng: -111.654923},
                                           zoom = 11,
                                           containerStyle = {width: "100%", height: "400px"},
@@ -56,119 +62,146 @@ export default function RealEstateMap({
                                           onUpdatePolygon,
                                           onCreatePolygon,
                                       }: RealEstateMapProps) {
+    /* -------------------- bootstrap -------------------- */
     const {isLoaded} = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: LIBRARIES,
     });
 
+    /* -------------------- refs ------------------------- */
     const mapRef = useRef<google.maps.Map | null>(null);
-    const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
+    const drawingMgrRef = useRef<google.maps.drawing.DrawingManager | null>(null);
+    const editablePolyRef = useRef<google.maps.Polygon | null>(null);
+    const markerPoolRef = useRef<google.maps.Marker[]>([]);
 
-    const [isDrawingActive, setIsDrawingActive] = useState(false);
-    const [draftPolygon, setDraftPolygon] = useState<google.maps.Polygon | null>(null);
-    const [draftCoords, setDraftCoords] = useState<{ lat: number; lng: number }[] | null>(
-        null
-    );
-    const [editablePolygonInstance, setEditablePolygonInstance] =
-        useState<google.maps.Polygon | null>(null);
-
-    // InfoWindow state
-    const [selectedRE, setSelectedRE] = useState<RealEstateMapDto | null>(null);
-
-    const onMapLoad = useCallback((map: google.maps.Map) => {
-        mapRef.current = map;
-    }, []);
-
-    // If globalCenter exists, use it. Otherwise use the prop-based default.
+    /* -------------------- state ------------------------ */
     const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral>(
-        globalCenter || center
+        globalCenter || center,
     );
+    const [selected, setSelected] = useState<RealEstateMapDto | null>(null);
 
-    // Keep the rest of your logic unchanged...
-    function startDrawing() {
-        if (draftPolygon) {
-            draftPolygon.setMap(null);
-            setDraftPolygon(null);
-            setDraftCoords(null);
-        }
-        setIsDrawingActive(true);
-    }
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [draftPoly, setDraftPoly] = useState<google.maps.Polygon | null>(null);
+    const [draftCoords, setDraftCoords] = useState<
+        { lat: number; lng: number }[] | null
+    >(null);
 
-    function cancelDrawing() {
-        setIsDrawingActive(false);
-        if (drawingManagerRef.current) {
-            drawingManagerRef.current.setDrawingMode(null);
-        }
-    }
+    /* ------------------------------------------------------------------ */
+    /* Imperative marker pool                                             */
+    /* ------------------------------------------------------------------ */
+    const rebuildMarkers = useCallback(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const bounds = map.getBounds();
+        if (!bounds) return;
 
-    function getPathCoords(path: google.maps.MVCArray<google.maps.LatLng>) {
-        const coords: { lat: number; lng: number }[] = [];
-        for (let i = 0; i < path.getLength(); i++) {
+        /* remove old pool */
+        markerPoolRef.current.forEach((m) => m.setMap(null));
+        markerPoolRef.current = [];
+
+        /* add current visible markers */
+        realEstates.forEach((re) => {
+            if (
+                re.latitude == null ||
+                re.longitude == null ||
+                !bounds.contains(new google.maps.LatLng(re.latitude, re.longitude))
+            )
+                return;
+
+            const marker = new google.maps.Marker({
+                position: {lat: re.latitude, lng: re.longitude},
+                map,
+                icon: {
+                    url: attachedIds?.includes(re.id) ? "/yellow-dot.png" : "/red-dot.png",
+                },
+                title: re.mlsNumber ?? "",
+            });
+            marker.addListener("click", () => setSelected(re));
+            markerPoolRef.current.push(marker);
+        });
+    }, [realEstates, attachedIds]);
+
+    const rebuildMarkersDebounced = useCallback(debounce(rebuildMarkers, 250), [
+        rebuildMarkers,
+    ]);
+
+    /* first build after API ready */
+    useEffect(() => {
+        if (isLoaded && mapRef.current) rebuildMarkers();
+    }, [isLoaded, rebuildMarkers]);
+
+    /* ------------------------------------------------------------------ */
+    /* Drawing helpers                                                    */
+    /* ------------------------------------------------------------------ */
+    const getCoords = (path: google.maps.MVCArray<google.maps.LatLng>) =>
+        Array.from({length: path.getLength()}, (_, i) => {
             const pt = path.getAt(i);
-            coords.push({lat: pt.lat(), lng: pt.lng()});
-        }
-        return coords;
-    }
+            return {lat: pt.lat(), lng: pt.lng()};
+        });
+
+    const startDrawing = () => {
+        draftPoly?.setMap(null);
+        setDraftPoly(null);
+        setDraftCoords(null);
+        setIsDrawing(true);
+    };
+
+    const cancelDrawing = () => {
+        setIsDrawing(false);
+        drawingMgrRef.current?.setDrawingMode(null);
+    };
 
     const handleOverlayComplete = useCallback(
         (e: google.maps.drawing.OverlayCompleteEvent) => {
-            if (!isDrawingActive) {
-                e.overlay.setMap(null);
-                return;
-            }
-            if (e.type !== google.maps.drawing.OverlayType.POLYGON) {
+            if (!isDrawing || e.type !== google.maps.drawing.OverlayType.POLYGON) {
                 e.overlay.setMap(null);
                 return;
             }
 
             cancelDrawing();
-            const polygon = e.overlay as google.maps.Polygon;
-            const path = polygon.getPath();
-            const coords = getPathCoords(path);
+            const poly = e.overlay as google.maps.Polygon;
+            const coords = getCoords(poly.getPath());
             if (coords.length < 3) {
-                polygon.setMap(null);
+                poly.setMap(null);
                 return;
             }
 
-            setDraftPolygon(polygon);
+            setDraftPoly(poly);
             setDraftCoords(coords);
 
-            // Listen for shape changes
-            google.maps.event.addListener(path, "set_at", () => {
-                setDraftCoords(getPathCoords(path));
-            });
-            google.maps.event.addListener(path, "insert_at", () => {
-                setDraftCoords(getPathCoords(path));
-            });
-            google.maps.event.addListener(path, "remove_at", () => {
-                setDraftCoords(getPathCoords(path));
-            });
+            /* keep draftCoords live while editing */
+            google.maps.event.addListener(poly.getPath(), "set_at", () =>
+                setDraftCoords(getCoords(poly.getPath())),
+            );
+            google.maps.event.addListener(poly.getPath(), "insert_at", () =>
+                setDraftCoords(getCoords(poly.getPath())),
+            );
+            google.maps.event.addListener(poly.getPath(), "remove_at", () =>
+                setDraftCoords(getCoords(poly.getPath())),
+            );
         },
-        [isDrawingActive]
+        [isDrawing],
     );
 
-    function handleSaveNewPolygon() {
-        if (!draftPolygon || !draftCoords || !onCreatePolygon) return;
-        const name = window.prompt("Enter a name for the new polygon:");
+    /* ---------------- save new polygon ---------------- */
+    const saveDraftPolygon = () => {
+        if (!draftPoly || !draftCoords || !onCreatePolygon) return;
+
+        const name = window.prompt("Polygon name:");
         if (!name) return;
 
-        // Determine which real estate objects are inside
         const googlePoly = new google.maps.Polygon({paths: draftCoords});
-        const insideIds: string[] = [];
-
-        realEstates.forEach((re) => {
-            if (
-                re.latitude !== null &&
-                re.latitude !== undefined &&
-                re.longitude !== null &&
-                re.longitude !== undefined
-            ) {
-                const pos = new google.maps.LatLng(re.latitude, re.longitude);
-                if (google.maps.geometry.poly.containsLocation(pos, googlePoly)) {
-                    insideIds.push(re.id);
-                }
-            }
-        });
+        const insideIds = realEstates
+            .filter(
+                (re) =>
+                    re.latitude != null &&
+                    re.longitude != null &&
+                    google.maps.geometry.poly.containsLocation(
+                        new google.maps.LatLng(re.latitude, re.longitude),
+                        googlePoly,
+                    ),
+            )
+            .map((re) => re.id);
 
         onCreatePolygon({
             name,
@@ -176,101 +209,85 @@ export default function RealEstateMap({
             realEstateIds: insideIds,
         });
 
-        draftPolygon.setMap(null);
-        setDraftPolygon(null);
+        draftPoly.setMap(null);
+        setDraftPoly(null);
         setDraftCoords(null);
-    }
+    };
 
-    function handleDiscardNewPolygon() {
-        if (draftPolygon) {
-            draftPolygon.setMap(null);
-        }
-        setDraftPolygon(null);
+    const discardDraftPolygon = () => {
+        draftPoly?.setMap(null);
+        setDraftPoly(null);
         setDraftCoords(null);
-    }
+    };
 
-    function handleSaveEditablePolygon() {
-        if (!editablePolygon || !editablePolygonInstance || !onUpdatePolygon) return;
+    /* ---------------- save edited polygon ------------- */
+    const saveEditablePolygon = () => {
+        if (!editablePolygon || !editablePolyRef.current || !onUpdatePolygon) return;
 
-        const path = editablePolygonInstance.getPath();
-        const coords = getPathCoords(path);
+        const coords = getCoords(editablePolyRef.current.getPath());
 
-        // Determine which real estate objects are inside
         const googlePoly = new google.maps.Polygon({paths: coords});
-        const insideIds: string[] = [];
+        const insideIds = realEstates
+            .filter(
+                (re) =>
+                    re.latitude != null &&
+                    re.longitude != null &&
+                    google.maps.geometry.poly.containsLocation(
+                        new google.maps.LatLng(re.latitude, re.longitude),
+                        googlePoly,
+                    ),
+            )
+            .map((re) => re.id);
 
-        realEstates.forEach((re) => {
-            if (
-                re.latitude !== null &&
-                re.latitude !== undefined &&
-                re.longitude !== null &&
-                re.longitude !== undefined
-            ) {
-                const pos = new google.maps.LatLng(re.latitude, re.longitude);
-                if (google.maps.geometry.poly.containsLocation(pos, googlePoly)) {
-                    insideIds.push(re.id);
-                }
-            }
-        });
+        if (!window.confirm("Save polygon changes?")) return;
+        onUpdatePolygon({coordinates: coords, realEstateIds: insideIds});
+    };
 
-        if (!window.confirm("Save changes to polygon?")) return;
-        onUpdatePolygon({
-            coordinates: coords,
-            realEstateIds: insideIds,
-        });
-    }
-
-    if (!isLoaded) {
-        return <div>Loading Map...</div>;
-    }
+    /* ------------------------------------------------------------------ */
+    /* Render                                                             */
+    /* ------------------------------------------------------------------ */
+    if (!isLoaded) return <div>Loading Map…</div>;
 
     return (
         <div>
-            {/* Drawing Controls */}
+            {/* Drawing toggle */}
             {!editablePolygon && (
                 <div className="mb-2">
-                    {isDrawingActive ? (
-                        <button
-                            onClick={cancelDrawing}
-                            className="px-4 py-2 bg-gray-400 rounded"
-                        >
+                    {isDrawing ? (
+                        <button onClick={cancelDrawing} className="px-4 py-2 bg-gray-400 rounded">
                             Cancel Drawing
                         </button>
                     ) : (
-                        <button
-                            onClick={startDrawing}
-                            className="px-4 py-2 bg-blue-600 text-white rounded"
-                        >
-                            Draw New Polygon
+                        <button onClick={startDrawing} className="px-4 py-2 bg-blue-600 text-white rounded">
+                            Draw Polygon
                         </button>
                     )}
                 </div>
             )}
 
+            {/* Google Map -------------------------------------------------- */}
             <GoogleMap
                 mapContainerStyle={containerStyle}
                 center={mapCenter}
                 zoom={zoom}
-                onLoad={onMapLoad}
-
+                onLoad={(map) => {
+                    mapRef.current = map; // must return void
+                }}
                 onIdle={() => {
-                    if (mapRef.current) {
-                        const c = mapRef.current.getCenter();
-                        if (c) {
-                            const newCenter = {lat: c.lat(), lng: c.lng()};
-                            setMapCenter(newCenter);
-                            // Also update globalCenter so it persists after re-mount
-                            globalCenter = newCenter;
-                        }
+                    const c = mapRef.current?.getCenter();
+                    if (c) {
+                        const nc = {lat: c.lat(), lng: c.lng()};
+                        setMapCenter(nc);
+                        globalCenter = nc;
                     }
+                    rebuildMarkersDebounced();
                 }}
             >
+                {/* Drawing manager */}
                 <DrawingManager
-                    onLoad={(mgr) => (drawingManagerRef.current = mgr)}
+                    onLoad={(mgr) => (drawingMgrRef.current = mgr)}
+                    drawingMode={isDrawing ? google.maps.drawing.OverlayType.POLYGON : null}
                     onOverlayComplete={handleOverlayComplete}
-                    drawingMode={
-                        isDrawingActive ? google.maps.drawing.OverlayType.POLYGON : null
-                    }
                     options={{
                         drawingControl: false,
                         polygonOptions: {
@@ -284,7 +301,7 @@ export default function RealEstateMap({
                     }}
                 />
 
-                {/* Display polygon in read-only (blue) */}
+                {/* Read-only polygon (blue) */}
                 {displayPolygon && !editablePolygon && (
                     <MapPolygon
                         paths={displayPolygon.coordinates}
@@ -297,101 +314,71 @@ export default function RealEstateMap({
                     />
                 )}
 
-                {/* Editable polygon in green */}
+                {/* Editable polygon (green) */}
                 {editablePolygon && (
                     <MapPolygon
                         paths={editablePolygon.coordinates}
                         editable
+                        onLoad={(poly) => (editablePolyRef.current = poly)}
                         options={{
                             fillColor: "#00FF00",
                             fillOpacity: 0.3,
                             strokeColor: "#00FF00",
                             strokeWeight: 2,
                         }}
-                        onLoad={(poly) => setEditablePolygonInstance(poly)}
                     />
                 )}
 
-                {/* Markers */}
-                {realEstates.map((re) => {
-                    if (re.latitude == null || re.longitude == null) {
-                        return null;
-                    }
-                    const isPolyAttached = attachedIds?.includes(re.id) ?? false;
-
-                    return (
-                        <AdvancedMarkerElement
-                            key={re.id}
-                            position={{lat: re.latitude, lng: re.longitude}}
-                            icon={{
-                                url: isPolyAttached
-                                    ? "/yellow-dot.png"
-                                    : "/red-dot.png",
-                            }}
-                            onClick={() => setSelectedRE(re)}
-                        />
-                    );
-                })}
-
-                {/* InfoWindow w/ editing form */}
-                {selectedRE && selectedRE.latitude != null && selectedRE.longitude != null && (
-                    <InfoWindow
-                        position={{lat: selectedRE.latitude, lng: selectedRE.longitude}}
-                        onCloseClick={() => setSelectedRE(null)}
-                    >
-                        <div>
+                {/* InfoWindow for selected marker */}
+                {selected &&
+                    selected.latitude != null &&
+                    selected.longitude != null && (
+                        <InfoWindow
+                            position={{lat: selected.latitude, lng: selected.longitude}}
+                            onCloseClick={() => setSelected(null)}
+                        >
                             <RealEstateMarkerInfo
                                 realEstate={{
-                                    id: selectedRE.id,
-                                    mlsNumber: selectedRE.mlsNumber || "",
-                                    soldTerms: selectedRE.soldTerms || "",
-                                    soldPrice: selectedRE.soldPrice || "",
-                                    taxId: selectedRE.taxId || "",
-                                    address: selectedRE.address || "",
-                                    city: selectedRE.city || "",
-                                    state: selectedRE.state || "",
-                                    zip: selectedRE.zip || "",
-                                    status: selectedRE.status || "",
+                                    id: selected.id,
+                                    mlsNumber: selected.mlsNumber ?? "",
+                                    soldTerms: selected.soldTerms ?? "",
+                                    soldPrice: selected.soldPrice ?? "",
+                                    taxId: selected.taxId ?? "",
+                                    address: selected.address ?? "",
+                                    city: selected.city ?? "",
+                                    state: selected.state ?? "",
+                                    zip: selected.zip ?? "",
+                                    status: selected.status ?? "",
                                     listPrice: "",
-                                    latitude: selectedRE.latitude?.toString() || "",
-                                    longitude: selectedRE.longitude?.toString() || "",
+                                    latitude: String(selected.latitude),
+                                    longitude: String(selected.longitude),
                                 }}
-                                isAttached={attachedIds?.includes(selectedRE.id)}
-                                onToggleAttachment={undefined} // not used in the main map
-                                onClose={() => setSelectedRE(null)}
+                                isAttached={attachedIds?.includes(selected.id)}
+                                onToggleAttachment={undefined}
+                                onClose={() => setSelected(null)}
                                 mode={RealEstateMarkerInfoMode.MAP_PAGE}
                             />
-                        </div>
-                    </InfoWindow>
-                )}
+                        </InfoWindow>
+                    )}
             </GoogleMap>
 
-            {/* Draft polygon controls */}
-            {draftPolygon && draftCoords && (
+            {/* Draft polygon actions */}
+            {draftPoly && draftCoords && (
                 <div className="mt-3 flex gap-2">
-                    <button
-                        onClick={handleSaveNewPolygon}
-                        className="px-3 py-1 bg-green-600 text-white rounded"
-                    >
-                        Save New Polygon
+                    <button onClick={saveDraftPolygon} className="px-3 py-1 bg-green-600 text-white rounded">
+                        Save Polygon
                     </button>
-                    <button
-                        onClick={handleDiscardNewPolygon}
-                        className="px-3 py-1 bg-red-600 text-white rounded"
-                    >
-                        Discard New Polygon
+                    <button onClick={discardDraftPolygon} className="px-3 py-1 bg-red-600 text-white rounded">
+                        Discard
                     </button>
                 </div>
             )}
 
-            {/* Editable polygon save button */}
+            {/* Editable polygon save */}
             {editablePolygon && onUpdatePolygon && (
                 <div className="mt-3">
-                    <button
-                        onClick={handleSaveEditablePolygon}
-                        className="px-3 py-1 bg-green-600 text-white rounded"
-                    >
-                        Save Edited Polygon
+                    <button onClick={saveEditablePolygon} className="px-3 py-1 bg-green-600 text-white rounded">
+                        Save Changes
                     </button>
                 </div>
             )}

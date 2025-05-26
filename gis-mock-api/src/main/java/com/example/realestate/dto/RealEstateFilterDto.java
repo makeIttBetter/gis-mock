@@ -25,4 +25,9 @@ public class RealEstateFilterDto {
     private Boolean basementFinished;
     private Integer daysBackMin;
     private Integer daysBackMax;
+
+    private Double minLat;
+    private Double maxLat;
+    private Double minLng;
+    private Double maxLng;
 }
