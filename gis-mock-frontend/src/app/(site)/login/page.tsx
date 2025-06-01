@@ -1,37 +1,28 @@
 "use client";
 
-import React, {useState} from "react";
-import {useRouter} from "next/navigation";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 /**
- * Reusable function to perform the sign-in request.
- * It sends the username and password to the backend,
- * and if successful, sets the JWT cookie.
+ * Makes the sign-in call to the backend.
+ * The backend now sets an **HttpOnly / Secure / SameSite=None** cookie,
+ * so the frontend no longer touches `document.cookie`.
  */
 async function signInRequest(username: string, password: string): Promise<void> {
-    const response = await fetch(
+    const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
         {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
-            credentials: "include", // ensures cookies are included
-            body: JSON.stringify({username, password}),
+            headers: { "Content-Type": "application/json" },
+            credentials: "include", // <- IMPORTANT: forward cookies both ways
+            body: JSON.stringify({ username, password }),
         }
     );
 
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || "Sign-in failed.");
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Sign-in failed");
     }
-
-    const data = await response.json();
-    if (!data.token) {
-        throw new Error("No token returned from server");
-    }
-
-    const maxAge = 24 * 60 * 60; // 1 day in seconds
-    // Set cookie with necessary flags: SameSite=None; Secure for HTTPS environments.
-    document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=None; Secure;`;
 }
 
 export default function LoginPage() {
@@ -45,53 +36,48 @@ export default function LoginPage() {
         setError(null);
 
         try {
-            // First sign-in attempt
-            await signInRequest(username, password);
-
-            // Refresh the page so that Next.js middleware picks up the newly set cookie
-            router.refresh();
-
-            // Second sign-in attempt to ensure the token is properly recognized
-            await signInRequest(username, password);
-
-            console.log("Sign-in successful! Redirecting to /map...");
-            router.push("/map");
+            await signInRequest(username, password); // one call is enough
+            router.push("/map");                     // backend cookie is already set
         } catch (err: any) {
             setError(err.message);
         }
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="flex min-h-screen items-center justify-center bg-gray-100">
             <form
                 onSubmit={handleSubmit}
-                className="bg-white p-6 rounded shadow-md w-full max-w-sm"
+                className="w-full max-w-sm rounded bg-white p-6 shadow-md"
             >
-                <h1 className="text-2xl font-bold mb-4">Login</h1>
-                {error && <div className="text-red-600 mb-3">{error}</div>}
+                <h1 className="mb-4 text-2xl font-bold">Login</h1>
+
+                {error && <p className="mb-3 text-red-600">{error}</p>}
+
                 <div className="mb-3">
-                    <label className="block mb-1 text-sm font-medium">Username</label>
+                    <label className="mb-1 block text-sm font-medium">Username</label>
                     <input
                         type="text"
-                        className="border rounded w-full p-2"
+                        className="w-full rounded border p-2"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
                     />
                 </div>
+
                 <div className="mb-4">
-                    <label className="block mb-1 text-sm font-medium">Password</label>
+                    <label className="mb-1 block text-sm font-medium">Password</label>
                     <input
                         type="password"
-                        className="border rounded w-full p-2"
+                        className="w-full rounded border p-2"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
                 </div>
+
                 <button
                     type="submit"
-                    className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+                    className="w-full rounded bg-blue-600 px-4 py-2 text-white"
                 >
                     Sign In
                 </button>
