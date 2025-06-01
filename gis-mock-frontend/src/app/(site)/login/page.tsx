@@ -31,7 +31,7 @@ async function signInRequest(username: string, password: string): Promise<void> 
 
     const maxAge = 24 * 60 * 60; // 1 day in seconds
     // Set cookie with necessary flags: SameSite=None; Secure for HTTPS environments.
-    document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=None; Secure;`;
+    document.cookie = `jwtToken=${data.token}; Path=/; Max-Age=${maxAge}; SameSite=None;`;
 }
 
 export default function LoginPage() {
