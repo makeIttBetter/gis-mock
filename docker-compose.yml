@@ -23,9 +23,6 @@ services:
     container_name: gis-mock-frontend
     env_file:
       - ./.env
-    environment:
-      # Pass the backend URL to the frontend (make sure this matches your backend port)
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:${SERVER_PORT}
     ports:
       - "3001:3000"
     depends_on:
