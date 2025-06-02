@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, {useState} from "react";
+import {useRouter} from "next/navigation";
 
 /**
  * Makes the sign-in call to the backend.
@@ -13,9 +13,9 @@ async function signInRequest(username: string, password: string): Promise<void> 
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`,
         {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             credentials: "include", // <- IMPORTANT: forward cookies both ways
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({username, password}),
         }
     );
 
@@ -37,7 +37,13 @@ export default function LoginPage() {
 
         try {
             await signInRequest(username, password); // one call is enough
-            router.push("/map");                     // backend cookie is already set
+            // Refresh the page so that Next.js middleware picks up the newly set cookie
+            router.refresh();
+            // Second sign-in attempt to ensure the token is properly recognized
+            await signInRequest(username, password);
+
+            console.log("Sign-in successful! Redirecting to /map...");
+            router.push("/map");                    // backend cookie is already set
         } catch (err: any) {
             setError(err.message);
         }
