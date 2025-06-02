@@ -1,242 +1,180 @@
-// File: src/lib/api.ts
 /**
- * src/lib/api.ts
- * Generic API helper functions for REST calls.
- * MUST be used in every API call to the backend to use standardized headers, authorization and error handling, etc...
+ * Central REST helper.
+ * Now every error looks for either `message` or `error`
+ * coming back from the backend before falling back to status text.
  */
+import { API_ENDPOINTS } from "@/config";
 
-import {API_ENDPOINTS} from "@/config";
-
-/**
- * Convert an object into a query string.
- * @param paramsObj Object with key-value pairs.
- */
-function toQueryString(paramsObj: Record<string, any>): string {
-    const searchParams = new URLSearchParams();
-    Object.entries(paramsObj).forEach(([key, val]) => {
-        if (val !== undefined && val !== null) {
-            searchParams.append(key, String(val));
-        }
+function toQueryString(obj: Record<string, any>): string {
+    const s = new URLSearchParams();
+    Object.entries(obj).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) s.append(k, String(v));
     });
-    return searchParams.toString();
+    return s.toString();
 }
 
-/**
- * Encode a path string by splitting on '/' so that slashes are preserved.
- * Each segment is individually encoded.
- * @param path The path string.
- */
 function encodePath(path: string): string {
-    return path
-        .split("/")
-        .map((segment) => encodeURIComponent(segment))
-        .join("/");
+    return path.split("/").map(encodeURIComponent).join("/");
 }
 
-/**
- * Generic GET request.
- */
+/* -------------------------------------------------- */
+/*  unified helper for all verbs                      */
+/* -------------------------------------------------- */
+async function handleError(res: Response, url: string): Promise<never> {
+    const errData = await res.json().catch(() => ({}));
+    const msg =
+        errData.message ||
+        errData.error ||
+        `${res.status} ${res.statusText} (${url})`;
+    throw new Error(msg);
+}
+
+/* -------------------------------------------------- */
+/*  GET                                               */
+/* -------------------------------------------------- */
 export async function apiGet<T>(
     endpoint: keyof typeof API_ENDPOINTS,
     queryParams?: Record<string, any>,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
 ): Promise<T> {
-    const baseUrl = API_ENDPOINTS[endpoint];
-    const url = queryParams ? `${baseUrl}?${toQueryString(queryParams)}` : baseUrl;
-
-    // Define default headers
-    const defaultHeaders = {
-        "Accept": "application/json",
-    };
-
-    // Merge default headers with any additional headers provided
-    const mergedHeaders = {
-        ...defaultHeaders,
-        ...headers,
-    };
+    const base = API_ENDPOINTS[endpoint];
+    const url = queryParams ? `${base}?${toQueryString(queryParams)}` : base;
 
     const res = await fetch(url, {
         method: "GET",
-        headers: mergedHeaders,
+        headers: { Accept: "application/json", ...(headers || {}) },
         credentials: "include",
     });
-
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `GET ${url} failed: ${res.status}`);
-    }
-
+    if (!res.ok) return handleError(res, url);
     return res.json() as Promise<T>;
 }
 
-/**
- * Construct a URL by appending a path segment to the baseEndpoint,
- * then perform a GET request.
- */
+/* -------------------------------------------------- */
+/*  GET with extra path                               */
+/* -------------------------------------------------- */
 export async function apiGetPath<T>(
     endpoint: keyof typeof API_ENDPOINTS,
     path: string,
-    queryParams?: Record<string, any>
+    queryParams?: Record<string, any>,
 ): Promise<T> {
-    const baseUrl = API_ENDPOINTS[endpoint];
-    const encodedPath = encodePath(path);
     const url =
-        `${baseUrl}/${encodedPath}` +
+        `${API_ENDPOINTS[endpoint]}/${encodePath(path)}` +
         (queryParams ? `?${toQueryString(queryParams)}` : "");
 
     const res = await fetch(url, {
         method: "GET",
-        headers: {
-            "Accept": "application/json",
-        },
+        headers: { Accept: "application/json" },
         credentials: "include",
     });
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `GET ${url} failed: ${res.status}`);
-    }
+    if (!res.ok) return handleError(res, url);
     return res.json() as Promise<T>;
 }
 
-/**
- * Generic POST request with JSON payload.
- */
+/* -------------------------------------------------- */
+/*  POST (JSON)                                       */
+/* -------------------------------------------------- */
 export async function apiPost<T>(
     endpoint: keyof typeof API_ENDPOINTS,
-    data: any
+    data: any,
 ): Promise<T> {
     const url = API_ENDPOINTS[endpoint];
     const res = await fetch(url, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
     });
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `POST ${url} failed: ${res.status}`);
-    }
+    if (!res.ok) return handleError(res, url);
     return res.json() as Promise<T>;
 }
 
-/**
- * Generic POST request to a sub–path of the base endpoint.
- */
+/* -------------------------------------------------- */
+/*  POST to sub-path (JSON)                           */
+/* -------------------------------------------------- */
 export async function apiPostPath<T>(
     endpoint: keyof typeof API_ENDPOINTS,
     path: string,
     data: any,
-    queryParams?: Record<string, any>
+    queryParams?: Record<string, any>,
 ): Promise<T> {
-    const baseUrl = API_ENDPOINTS[endpoint];
-    const encodedPath = encodePath(path);
     const url =
-        `${baseUrl}/${encodedPath}` +
+        `${API_ENDPOINTS[endpoint]}/${encodePath(path)}` +
         (queryParams ? `?${toQueryString(queryParams)}` : "");
 
     const res = await fetch(url, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
     });
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `POST ${url} failed: ${res.status}`);
-    }
+    if (!res.ok) return handleError(res, url);
     return res.json() as Promise<T>;
 }
 
-/**
- * Generic PUT request.
- */
+/* -------------------------------------------------- */
+/*  PUT                                               */
+/* -------------------------------------------------- */
 export async function apiPut<T>(
     endpoint: keyof typeof API_ENDPOINTS,
     id: string,
-    data: any
+    data: any,
 ): Promise<T> {
     const url = `${API_ENDPOINTS[endpoint]}/${id}`;
     const res = await fetch(url, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(data),
     });
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `PUT ${url} failed: ${res.status}`);
-    }
+    if (!res.ok) return handleError(res, url);
     return res.json() as Promise<T>;
 }
 
-/**
- * Generic DELETE request.
- */
+/* -------------------------------------------------- */
+/*  DELETE (id)                                       */
+/* -------------------------------------------------- */
 export async function apiDelete(
     endpoint: keyof typeof API_ENDPOINTS,
-    id: string | number
+    id: string | number,
 ): Promise<boolean> {
     const url = `${API_ENDPOINTS[endpoint]}/${id}`;
     const res = await fetch(url, {
         method: "DELETE",
-        // headers: {},
         credentials: "include",
     });
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `DELETE ${url} failed: ${res.status}`);
-    }
+    if (!res.ok) return handleError(res, url);
     return true;
 }
 
-/**
- * Generic POST request for FormData payload.
- */
+/* -------------------------------------------------- */
+/*  POST (FormData)                                   */
+/* -------------------------------------------------- */
 export async function apiPostFormData<T>(
     endpoint: keyof typeof API_ENDPOINTS,
     path: string,
-    formData: FormData
+    formData: FormData,
 ): Promise<T> {
-    const baseUrl = API_ENDPOINTS[endpoint];
-    const encodedPath = encodePath(path);
-    const url = `${baseUrl}/${encodedPath}`;
+    const url = `${API_ENDPOINTS[endpoint]}/${encodePath(path)}`;
     const res = await fetch(url, {
-            method: "POST",
-            // Do NOT set "Content-Type", the browser sets it automatically when sending FormData.
-            // headers: {
-            //     "Content-Type": "application/json",
-            // },
-            credentials: "include",
-            body:
-            formData,
-        })
-    ;
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `POST ${url} failed: ${res.status}`);
-    }
+        method: "POST",
+        credentials: "include",
+        body: formData,               // browser sets multipart headers
+    });
+    if (!res.ok) return handleError(res, url);
     return res.json() as Promise<T>;
 }
 
-// Inside src/lib/api.ts (for example):
-export async function apiDeletePath(endpoint: keyof typeof API_ENDPOINTS, path: string): Promise<void> {
-    const baseUrl = API_ENDPOINTS[endpoint];
-    const encodedPath = encodePath(path);
-    const url = `${baseUrl}/${encodedPath}`;
-
+/* -------------------------------------------------- */
+/*  Helper: DELETE to sub-path                        */
+/* -------------------------------------------------- */
+export async function apiDeletePath(
+    endpoint: keyof typeof API_ENDPOINTS,
+    path: string,
+): Promise<void> {
+    const url = `${API_ENDPOINTS[endpoint]}/${encodePath(path)}`;
     const res = await fetch(url, {
         method: "DELETE",
         credentials: "include",
     });
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `DELETE ${url} failed: ${res.status}`);
-    }
+    if (!res.ok) return handleError(res, url);
 }
-
