@@ -17,7 +17,7 @@ RUN mvn dependency:go-offline -B
 RUN mvn clean package -DskipTests
 
 # Stage 2: Run the application
-FROM openjdk:17-jdk-slim
+FROM openjdk:17.0.1-jdk-slim
 
 # Set working directory
 WORKDIR /app
