@@ -1,5 +1,6 @@
 package com.example.realestate.model;
 
+import com.example.realestate.annotations.ExportDataType;
 import com.example.realestate.annotations.ExportField;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -54,15 +55,15 @@ public class RealEstate extends Model {
     @Column(name = "short_sale")
     private String shortSale;
 
-    @ExportField(fieldName = "time_uc", displayName = "Time UC")
+    @ExportField(fieldName = "time_uc", displayName = "Time UC", exportType = ExportDataType.INTEGER)
     @Column(name = "time_uc")
     private String timeUC;
 
-    @ExportField(fieldName = "dom", displayName = "DOM")
+    @ExportField(fieldName = "dom", displayName = "DOM", exportType = ExportDataType.INTEGER)
     @Column(name = "dom")
     private Integer dom;
 
-    @ExportField(fieldName = "sold_date", displayName = "Sold Date")
+    @ExportField(fieldName = "sold_date", displayName = "Sold Date", exportType = ExportDataType.DATE)
     @Column(name = "sold_date")
     private LocalDate soldDate;
 
@@ -70,47 +71,47 @@ public class RealEstate extends Model {
     @Column(name = "sold_terms")
     private String soldTerms;
 
-    @ExportField(fieldName = "sold_price", displayName = "Sold Price")
+    @ExportField(fieldName = "sold_price", displayName = "Sold Price", exportType = ExportDataType.CURRENCY)
     @Column(name = "sold_price")
     private String soldPrice;
 
-    @ExportField(fieldName = "sold_concessions", displayName = "Sold Concessions")
+    @ExportField(fieldName = "sold_concessions", displayName = "Sold Concessions", exportType = ExportDataType.CURRENCY)
     @Column(name = "sold_concessions")
     private String soldConcessions;
 
-    @ExportField(fieldName = "list_price", displayName = "List Price")
+    @ExportField(fieldName = "list_price", displayName = "List Price", exportType = ExportDataType.CURRENCY)
     @Column(name = "list_price")
     private String listPrice;
 
-    @ExportField(fieldName = "original_list_price", displayName = "Original List Price")
+    @ExportField(fieldName = "original_list_price", displayName = "Original List Price", exportType = ExportDataType.CURRENCY)
     @Column(name = "original_list_price")
     private String originalListPrice;
 
-    @ExportField(fieldName = "under_contract_date", displayName = "Under Contract Date")
+    @ExportField(fieldName = "under_contract_date", displayName = "Under Contract Date", exportType = ExportDataType.DATE)
     @Column(name = "under_contract_date")
     private LocalDate underContractDate;
 
-    @ExportField(fieldName = "entry_date", displayName = "Entry Date")
+    @ExportField(fieldName = "entry_date", displayName = "Entry Date", exportType = ExportDataType.DATE)
     @Column(name = "entry_date")
     private LocalDate entryDate;
 
-    @ExportField(fieldName = "effective_date_of_listing_agreement", displayName = "Effective Date Of The Listing Agreement")
+    @ExportField(fieldName = "effective_date_of_listing_agreement", displayName = "Effective Date Of The Listing Agreement", exportType = ExportDataType.DATE)
     @Column(name = "effective_date_of_listing_agreement")
     private LocalDate effectiveDateOfListingAgreement;
 
-    @ExportField(fieldName = "status_change_date", displayName = "Status Change Date")
+    @ExportField(fieldName = "status_change_date", displayName = "Status Change Date", exportType = ExportDataType.DATE)
     @Column(name = "status_change_date")
     private LocalDate statusChangeDate;
 
-    @ExportField(fieldName = "off_market_date", displayName = "Off Market Date")
+    @ExportField(fieldName = "off_market_date", displayName = "Off Market Date", exportType = ExportDataType.DATE)
     @Column(name = "off_market_date")
     private LocalDate offMarketDate;
 
-    @ExportField(fieldName = "reinstated_date", displayName = "Reinstated Date")
+    @ExportField(fieldName = "reinstated_date", displayName = "Reinstated Date", exportType = ExportDataType.DATE)
     @Column(name = "reinstated_date")
     private LocalDate reinstatedDate;
 
-    @ExportField(fieldName = "cancel_date", displayName = "Cancel Date")
+    @ExportField(fieldName = "cancel_date", displayName = "Cancel Date", exportType = ExportDataType.DATE)
     @Column(name = "cancel_date")
     private LocalDate cancelDate;
 
@@ -118,35 +119,35 @@ public class RealEstate extends Model {
     @Column(name = "offer_under_3rd_party_review")
     private String offerUnder3rdPartyReview;
 
-    @ExportField(fieldName = "price_increase_date", displayName = "Price Increase Date")
+    @ExportField(fieldName = "price_increase_date", displayName = "Price Increase Date", exportType = ExportDataType.DATE)
     @Column(name = "price_increase_date")
     private LocalDate priceIncreaseDate;
 
-    @ExportField(fieldName = "price_increase_days_back", displayName = "Price Increase Days Back")
+    @ExportField(fieldName = "price_increase_days_back", displayName = "Price Increase Days Back", exportType = ExportDataType.INTEGER)
     @Column(name = "price_increase_days_back")
     private Integer priceIncreaseDaysBack;
 
-    @ExportField(fieldName = "price_reduction_date", displayName = "Price Reduction Date")
+    @ExportField(fieldName = "price_reduction_date", displayName = "Price Reduction Date", exportType = ExportDataType.DATE)
     @Column(name = "price_reduction_date")
     private LocalDate priceReductionDate;
 
-    @ExportField(fieldName = "price_reduction_days_back", displayName = "Price Reduction Days Back")
+    @ExportField(fieldName = "price_reduction_days_back", displayName = "Price Reduction Days Back", exportType = ExportDataType.INTEGER)
     @Column(name = "price_reduction_days_back")
     private Integer priceReductionDaysBack;
 
-    @ExportField(fieldName = "backup_status_date", displayName = "Backup Status Date")
+    @ExportField(fieldName = "backup_status_date", displayName = "Backup Status Date", exportType = ExportDataType.DATE)
     @Column(name = "backup_status_date")
     private LocalDate backupStatusDate;
 
-    @ExportField(fieldName = "withdrawal_date", displayName = "Withdrawal Date")
+    @ExportField(fieldName = "withdrawal_date", displayName = "Withdrawal Date", exportType = ExportDataType.DATE)
     @Column(name = "withdrawal_date")
     private LocalDate withdrawalDate;
 
-    @ExportField(fieldName = "expire_date", displayName = "Expire Date")
+    @ExportField(fieldName = "expire_date", displayName = "Expire Date", exportType = ExportDataType.DATE)
     @Column(name = "expire_date")
     private LocalDate expireDate;
 
-    @ExportField(fieldName = "acres", displayName = "Acres")
+    @ExportField(fieldName = "acres", displayName = "Acres", exportType = ExportDataType.DECIMAL)
     @Column(name = "acres", precision = 5, scale = 2)
     private BigDecimal acres;
 
@@ -158,63 +159,63 @@ public class RealEstate extends Model {
     @Column(name = "style")
     private String style;
 
-    @ExportField(fieldName = "year_built", displayName = "Year Built")
+    @ExportField(fieldName = "year_built", displayName = "Year Built", exportType = ExportDataType.INTEGER)
     @Column(name = "year_built")
     private Integer yearBuilt;
 
-    @ExportField(fieldName = "gross_living_area_gla", displayName = "Gross Living Area (GLA)")
+    @ExportField(fieldName = "gross_living_area_gla", displayName = "Gross Living Area (GLA)", exportType = ExportDataType.INTEGER)
     @Column(name = "gross_living_area_gla")
     private Integer grossLivingAreaGla;
 
-    @ExportField(fieldName = "total_square_feet", displayName = "Total Square Feet")
+    @ExportField(fieldName = "total_square_feet", displayName = "Total Square Feet", exportType = ExportDataType.INTEGER)
     @Column(name = "total_square_feet")
     private Integer totalSquareFeet;
 
-    @ExportField(fieldName = "total_bedrooms", displayName = "Total Bedrooms")
+    @ExportField(fieldName = "total_bedrooms", displayName = "Total Bedrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "total_bedrooms")
     private Integer totalBedrooms;
 
-    @ExportField(fieldName = "total_bathrooms", displayName = "Total Bathrooms")
+    @ExportField(fieldName = "total_bathrooms", displayName = "Total Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "total_bathrooms")
     private Integer totalBathrooms;
 
-    @ExportField(fieldName = "total_full_bathrooms", displayName = "Total Full Bathrooms")
+    @ExportField(fieldName = "total_full_bathrooms", displayName = "Total Full Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "total_full_bathrooms")
     private Integer totalFullBathrooms;
 
-    @ExportField(fieldName = "total_three_quarter_bathrooms", displayName = "Total Three-quarter Bathrooms")
+    @ExportField(fieldName = "total_three_quarter_bathrooms", displayName = "Total Three-quarter Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "total_three_quarter_bathrooms")
     private Integer totalThreeQuarterBathrooms;
 
-    @ExportField(fieldName = "total_half_bathrooms", displayName = "Total Half Bathrooms")
+    @ExportField(fieldName = "total_half_bathrooms", displayName = "Total Half Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "total_half_bathrooms")
     private Integer totalHalfBathrooms;
 
-    @ExportField(fieldName = "total_kitchens", displayName = "Total Kitchens")
+    @ExportField(fieldName = "total_kitchens", displayName = "Total Kitchens", exportType = ExportDataType.INTEGER)
     @Column(name = "total_kitchens")
     private Integer totalKitchens;
 
-    @ExportField(fieldName = "basement_square_feet", displayName = "Basement Square Feet")
+    @ExportField(fieldName = "basement_square_feet", displayName = "Basement Square Feet", exportType = ExportDataType.INTEGER)
     @Column(name = "basement_square_feet")
     private Integer basementSquareFeet;
 
-    @ExportField(fieldName = "basement_finished", displayName = "Basement Finished")
+    @ExportField(fieldName = "basement_finished", displayName = "Basement Finished", exportType = ExportDataType.INTEGER)
     @Column(name = "basement_finished")
     private Integer basementFinished;
 
-    @ExportField(fieldName = "basement_bedrooms", displayName = "Basement Bedrooms")
+    @ExportField(fieldName = "basement_bedrooms", displayName = "Basement Bedrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "basement_bedrooms")
     private Integer basementBedrooms;
 
-    @ExportField(fieldName = "basement_full_bathrooms", displayName = "Basement Full Bathrooms")
+    @ExportField(fieldName = "basement_full_bathrooms", displayName = "Basement Full Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "basement_full_bathrooms")
     private Integer basementFullBathrooms;
 
-    @ExportField(fieldName = "basement_three_quarter_bathrooms", displayName = "Basement Three-quarter Bathrooms")
+    @ExportField(fieldName = "basement_three_quarter_bathrooms", displayName = "Basement Three-quarter Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "basement_three_quarter_bathrooms")
     private Integer basementThreeQuarterBathrooms;
 
-    @ExportField(fieldName = "basement_half_bathrooms", displayName = "Basement Half Bathrooms")
+    @ExportField(fieldName = "basement_half_bathrooms", displayName = "Basement Half Bathrooms", exportType = ExportDataType.INTEGER)
     @Column(name = "basement_half_bathrooms")
     private Integer basementHalfBathrooms;
 
@@ -230,11 +231,11 @@ public class RealEstate extends Model {
     @Column(name = "air_conditioning")
     private String airConditioning;
 
-    @ExportField(fieldName = "garage_capacity", displayName = "Garage Capacity")
+    @ExportField(fieldName = "garage_capacity", displayName = "Garage Capacity", exportType = ExportDataType.INTEGER)
     @Column(name = "garage_capacity")
     private Integer garageCapacity;
 
-    @ExportField(fieldName = "carport_capacity", displayName = "Carport Capacity")
+    @ExportField(fieldName = "carport_capacity", displayName = "Carport Capacity", exportType = ExportDataType.INTEGER)
     @Column(name = "carport_capacity")
     private Integer carportCapacity;
 
@@ -242,7 +243,7 @@ public class RealEstate extends Model {
     @Column(name = "garage_parking")
     private String garageParking;
 
-    @ExportField(fieldName = "decks", displayName = "Decks")
+    @ExportField(fieldName = "decks", displayName = "Decks", exportType = ExportDataType.INTEGER)
     @Column(name = "decks")
     private Integer decks;
 
@@ -254,7 +255,7 @@ public class RealEstate extends Model {
     @Column(name = "solar_ownership")
     private String solarOwnership;
 
-    @ExportField(fieldName = "total_fireplaces", displayName = "Total Fireplaces")
+    @ExportField(fieldName = "total_fireplaces", displayName = "Total Fireplaces", exportType = ExportDataType.INTEGER)
     @Column(name = "total_fireplaces")
     private Integer totalFireplaces;
 
@@ -270,7 +271,7 @@ public class RealEstate extends Model {
     @Column(name = "pool_details")
     private String poolDetails;
 
-    @ExportField(fieldName = "hoa_fee", displayName = "HOA Fee")
+    @ExportField(fieldName = "hoa_fee", displayName = "HOA Fee", exportType = ExportDataType.CURRENCY)
     @Column(name = "hoa_fee")
     private String hoaFee;
 
@@ -282,19 +283,19 @@ public class RealEstate extends Model {
     @Column(name = "hoa_remarks")
     private String hoaRemarks;
 
-    @ExportField(fieldName = "main_floor_square_feet", displayName = "Main Floor Square Feet")
+    @ExportField(fieldName = "main_floor_square_feet", displayName = "Main Floor Square Feet", exportType = ExportDataType.INTEGER)
     @Column(name = "main_floor_square_feet")
     private Integer mainFloorSquareFeet;
 
-    @ExportField(fieldName = "second_floor_square_feet", displayName = "Second Floor Square Feet")
+    @ExportField(fieldName = "second_floor_square_feet", displayName = "Second Floor Square Feet", exportType = ExportDataType.INTEGER)
     @Column(name = "second_floor_square_feet")
     private Integer secondFloorSquareFeet;
 
-    @ExportField(fieldName = "third_floor_square_feet", displayName = "Third Floor Square Feet")
+    @ExportField(fieldName = "third_floor_square_feet", displayName = "Third Floor Square Feet", exportType = ExportDataType.INTEGER)
     @Column(name = "third_floor_square_feet")
     private Integer thirdFloorSquareFeet;
 
-    @ExportField(fieldName = "fourth_floor_square_feet", displayName = "Fourth Floor Square Feet")
+    @ExportField(fieldName = "fourth_floor_square_feet", displayName = "Fourth Floor Square Feet", exportType = ExportDataType.INTEGER)
     @Column(name = "fourth_floor_square_feet")
     private Integer fourthFloorSquareFeet;
 
@@ -366,11 +367,11 @@ public class RealEstate extends Model {
     @Column(name = "full_address")
     private String fullAddress;
 
-    @ExportField(fieldName = "latitude", displayName = "Latitude")
+    @ExportField(fieldName = "latitude", displayName = "Latitude", exportType = ExportDataType.DECIMAL)
     @Column(name = "latitude", precision = 38, scale = 20)
     private BigDecimal latitude;
 
-    @ExportField(fieldName = "longitude", displayName = "Longitude")
+    @ExportField(fieldName = "longitude", displayName = "Longitude", exportType = ExportDataType.DECIMAL)
     @Column(name = "longitude", precision = 38, scale = 20)
     private BigDecimal longitude;
 
@@ -395,7 +396,7 @@ public class RealEstate extends Model {
     private String htmlBodyTd;
 
     // Export getDaysBack via a getter method below.
-    @ExportField(fieldName = "days_back", displayName = "Days Back")
+    @ExportField(fieldName = "days_back", displayName = "Days Back", exportType = ExportDataType.INTEGER)
     @Transient
     public Integer getDaysBack() {
         if (this.soldDate == null) {

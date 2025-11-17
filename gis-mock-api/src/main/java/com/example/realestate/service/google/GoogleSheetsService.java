@@ -1,7 +1,9 @@
 package com.example.realestate.service.google;
 
+import com.example.realestate.annotations.ExportDataType;
 import com.example.realestate.annotations.ExportField;
 import com.example.realestate.export.cnst.RealEstateCsvConfig;
+import com.example.realestate.export.service.RealEstateExportValueFormatter;
 import com.example.realestate.model.Polygon;
 import com.example.realestate.model.RealEstate;
 import com.example.realestate.repository.PolygonRepository;
@@ -19,7 +21,6 @@ import org.springframework.web.client.RestTemplate;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,6 +33,7 @@ public class GoogleSheetsService {
     private final PolygonService polygonService;
     private final RealEstateService realEstateService;
     private final RealEstateCsvConfig csvConfig;
+    private final RealEstateExportValueFormatter valueFormatter;
     private final RestTemplate restTemplate;
 
     /**
@@ -164,7 +166,9 @@ public class GoogleSheetsService {
     }
 
     private void populateSpreadsheet(String accessToken, String spreadsheetId, List<RealEstate> realEstates) {
-        List<List<String>> sheetData = prepareSheetData(realEstates);
+        Map<String, AnnotatedAccessor> annotatedAccessors = buildAnnotatedAccessors();
+        List<String> configKeysInOrder = new ArrayList<>(csvConfig.getExportColumnsOrdered().keySet());
+        List<List<Object>> sheetData = prepareSheetData(realEstates, annotatedAccessors, configKeysInOrder);
         int numRows = sheetData.size();
         int numCols = sheetData.isEmpty() ? 0 : sheetData.get(0).size();
 
@@ -172,9 +176,9 @@ public class GoogleSheetsService {
         String range = "PolygonData!A1:" + getColumnLetter(numCols) + numRows;
         log.info("Updating range: {}", range);
 
-        // e.g. "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/PolygonData!A1:D25?valueInputOption=RAW"
+        // e.g. "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/PolygonData!A1:D25?valueInputOption=USER_ENTERED"
         String url = sheetsApiBaseUrl + "/" + spreadsheetId
-                + "/values/" + range + "?valueInputOption=RAW";
+                + "/values/" + range + "?valueInputOption=USER_ENTERED";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -190,31 +194,38 @@ public class GoogleSheetsService {
         if (!response.getStatusCode().is2xxSuccessful()) {
             throw new RuntimeException("Failed to populate spreadsheet");
         }
+
+        applyColumnFormats(accessToken, spreadsheetId, configKeysInOrder, annotatedAccessors, numRows);
     }
 
-    private List<List<String>> prepareSheetData(List<RealEstate> realEstates) {
+    private Map<String, AnnotatedAccessor> buildAnnotatedAccessors() {
         Map<String, AnnotatedAccessor> annotatedAccessors = new HashMap<>();
         scanClassHierarchy(RealEstate.class, annotatedAccessors);
+        return annotatedAccessors;
+    }
 
-        // The config has the order of columns to export
-        List<String> configKeysInOrder = new ArrayList<>(csvConfig.getExportColumnsOrdered().keySet());
+    private List<List<Object>> prepareSheetData(List<RealEstate> realEstates,
+                                                Map<String, AnnotatedAccessor> annotatedAccessors,
+                                                List<String> configKeysInOrder) {
+        List<Object> headerRow = new ArrayList<>();
+        for (String key : configKeysInOrder) {
+            headerRow.add(csvConfig.getExportColumnsOrdered().get(key));
+        }
 
-        // Create the header row from the config's display names
-        List<String> headerRow = configKeysInOrder.stream()
-                .map(key -> csvConfig.getExportColumnsOrdered().get(key))
-                .collect(Collectors.toList());
-
-        // Build data rows
-        List<List<String>> dataRows = new ArrayList<>();
+        List<List<Object>> dataRows = new ArrayList<>();
         for (RealEstate re : realEstates) {
-            List<String> row = new ArrayList<>();
+            List<Object> row = new ArrayList<>();
             for (String fieldName : configKeysInOrder) {
                 AnnotatedAccessor accessor = annotatedAccessors.get(fieldName);
-                String cellValue = "";
+                Object cellValue = "";
                 if (accessor != null) {
                     try {
                         Object val = accessor.getValue(re);
-                        cellValue = (val == null) ? "" : val.toString();
+                        ExportDataType exportType = accessor.getExportType();
+                        RealEstateExportValueFormatter.FormatResult formatted =
+                                valueFormatter.formatValue(fieldName, exportType, val);
+                        Object sheetValue = formatted.sheetValue();
+                        cellValue = (sheetValue == null) ? "" : sheetValue;
                     } catch (Exception e) {
                         log.warn("Cannot read field {}: {}", fieldName, e.getMessage());
                     }
@@ -224,12 +235,146 @@ public class GoogleSheetsService {
             dataRows.add(row);
         }
 
-        // Final result: first row = header, then data rows
-        List<List<String>> sheetData = new ArrayList<>();
+        List<List<Object>> sheetData = new ArrayList<>();
         sheetData.add(headerRow);
         sheetData.addAll(dataRows);
 
         return sheetData;
+    }
+
+    private void applyColumnFormats(String accessToken,
+                                    String spreadsheetId,
+                                    List<String> configKeysInOrder,
+                                    Map<String, AnnotatedAccessor> annotatedAccessors,
+                                    int numRows) {
+        Integer sheetId = fetchSheetId(accessToken, spreadsheetId, "PolygonData");
+        if (sheetId == null) {
+            log.warn("Unable to resolve sheetId for PolygonData; skipping column formatting");
+            return;
+        }
+
+        int effectiveRowCount = Math.max(numRows, 1);
+
+        List<Map<String, Object>> requests = new ArrayList<>();
+        for (int colIndex = 0; colIndex < configKeysInOrder.size(); colIndex++) {
+            String fieldName = configKeysInOrder.get(colIndex);
+            AnnotatedAccessor accessor = annotatedAccessors.get(fieldName);
+            ExportDataType exportType = (accessor != null) ? accessor.getExportType() : ExportDataType.STRING;
+            Map<String, Object> numberFormat = buildNumberFormat(exportType);
+            if (numberFormat == null) {
+                continue;
+            }
+
+            Map<String, Object> userEnteredFormat = new HashMap<>();
+            userEnteredFormat.put("numberFormat", numberFormat);
+
+            Map<String, Object> cell = new HashMap<>();
+            cell.put("userEnteredFormat", userEnteredFormat);
+
+            Map<String, Object> range = new HashMap<>();
+            range.put("sheetId", sheetId);
+            range.put("startRowIndex", 0);
+            range.put("endRowIndex", effectiveRowCount);
+            range.put("startColumnIndex", colIndex);
+            range.put("endColumnIndex", colIndex + 1);
+
+            Map<String, Object> repeatCell = new HashMap<>();
+            repeatCell.put("range", range);
+            repeatCell.put("cell", cell);
+            repeatCell.put("fields", "userEnteredFormat.numberFormat");
+
+            Map<String, Object> request = new HashMap<>();
+            request.put("repeatCell", repeatCell);
+            requests.add(request);
+        }
+
+        if (requests.isEmpty()) {
+            return;
+        }
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("requests", requests);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        String url = sheetsApiBaseUrl + "/" + spreadsheetId + ":batchUpdate";
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            log.warn("Failed to apply column formats: {}", response.getStatusCode());
+        }
+    }
+
+    private Map<String, Object> buildNumberFormat(ExportDataType exportType) {
+        Map<String, Object> numberFormat = new HashMap<>();
+        switch (exportType) {
+            case STRING -> {
+                numberFormat.put("type", "TEXT");
+                numberFormat.put("pattern", "@");
+            }
+            case INTEGER -> {
+                numberFormat.put("type", "NUMBER");
+                numberFormat.put("pattern", "0");
+            }
+            case DECIMAL -> {
+                numberFormat.put("type", "NUMBER");
+                numberFormat.put("pattern", "#,##0.########");
+            }
+            case DATE -> {
+                numberFormat.put("type", "DATE");
+                numberFormat.put("pattern", "mm/dd/yyyy");
+            }
+            case DATETIME -> {
+                numberFormat.put("type", "DATE_TIME");
+                numberFormat.put("pattern", "mm/dd/yyyy hh:mm:ss");
+            }
+            case CURRENCY -> {
+                numberFormat.put("type", "CURRENCY");
+                numberFormat.put("pattern", "$#,##0");
+            }
+            default -> {
+                return null;
+            }
+        }
+        return numberFormat;
+    }
+
+    private Integer fetchSheetId(String accessToken, String spreadsheetId, String sheetName) {
+        String url = sheetsApiBaseUrl + "/" + spreadsheetId + "?fields=sheets(properties(sheetId,title))";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return null;
+            }
+            Object sheetsObj = response.getBody().get("sheets");
+            if (!(sheetsObj instanceof List<?> sheets)) {
+                return null;
+            }
+            for (Object sheetObj : sheets) {
+                if (!(sheetObj instanceof Map<?, ?> sheet)) {
+                    continue;
+                }
+                Object propsObj = sheet.get("properties");
+                if (!(propsObj instanceof Map<?, ?> props)) {
+                    continue;
+                }
+                Object titleObj = props.get("title");
+                if (sheetName.equals(titleObj)) {
+                    Object sheetIdObj = props.get("sheetId");
+                    if (sheetIdObj instanceof Number number) {
+                        return number.intValue();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Unable to fetch sheetId for {}: {}", sheetName, ex.getMessage());
+        }
+        return null;
     }
 
     private void scanClassHierarchy(Class<?> clazz, Map<String, AnnotatedAccessor> annotatedAccessors) {
@@ -241,7 +386,7 @@ public class GoogleSheetsService {
             ExportField ann = field.getAnnotation(ExportField.class);
             if (ann != null) {
                 field.setAccessible(true);
-                annotatedAccessors.put(ann.fieldName(), new FieldAccessor(field));
+                annotatedAccessors.put(ann.fieldName(), new FieldAccessor(field, ann.exportType()));
             }
         }
 
@@ -249,7 +394,7 @@ public class GoogleSheetsService {
             ExportField ann = method.getAnnotation(ExportField.class);
             if (ann != null) {
                 method.setAccessible(true);
-                annotatedAccessors.put(ann.fieldName(), new MethodAccessor(method));
+                annotatedAccessors.put(ann.fieldName(), new MethodAccessor(method, ann.exportType()));
             }
         }
 
@@ -335,31 +480,47 @@ public class GoogleSheetsService {
     // Accessors for fields/methods annotated with @ExportField
     private interface AnnotatedAccessor {
         Object getValue(Object instance) throws Exception;
+
+        ExportDataType getExportType();
     }
 
     private static class FieldAccessor implements AnnotatedAccessor {
         private final Field field;
+        private final ExportDataType exportType;
 
-        public FieldAccessor(Field field) {
+        public FieldAccessor(Field field, ExportDataType exportType) {
             this.field = field;
+            this.exportType = exportType;
         }
 
         @Override
         public Object getValue(Object instance) throws Exception {
             return field.get(instance);
         }
+
+        @Override
+        public ExportDataType getExportType() {
+            return exportType;
+        }
     }
 
     private static class MethodAccessor implements AnnotatedAccessor {
         private final Method method;
+        private final ExportDataType exportType;
 
-        public MethodAccessor(Method method) {
+        public MethodAccessor(Method method, ExportDataType exportType) {
             this.method = method;
+            this.exportType = exportType;
         }
 
         @Override
         public Object getValue(Object instance) throws Exception {
             return method.invoke(instance);
+        }
+
+        @Override
+        public ExportDataType getExportType() {
+            return exportType;
         }
     }
 }

@@ -1,6 +1,7 @@
 // File: src/main/java/com/example/realestate/model/Model.java
 package com.example.realestate.model;
 
+import com.example.realestate.annotations.ExportDataType;
 import com.example.realestate.annotations.ExportField;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,12 +31,12 @@ public abstract class Model implements Serializable {
     @Id
     private String id;
 
-    @ExportField(fieldName = "created_at", displayName = "Created at")
+    @ExportField(fieldName = "created_at", displayName = "Created at", exportType = ExportDataType.DATETIME)
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @ExportField(fieldName = "updated_at", displayName = "Updated at")
+    @ExportField(fieldName = "updated_at", displayName = "Updated at", exportType = ExportDataType.DATETIME)
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

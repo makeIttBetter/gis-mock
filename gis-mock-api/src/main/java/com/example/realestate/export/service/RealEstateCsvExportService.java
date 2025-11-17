@@ -1,5 +1,6 @@
 package com.example.realestate.export.service;
 
+import com.example.realestate.annotations.ExportDataType;
 import com.example.realestate.annotations.ExportField;
 import com.example.realestate.dto.model.PolygonDto;
 import com.example.realestate.export.cnst.RealEstateCsvConfig;
@@ -30,6 +31,7 @@ import java.util.Map;
 public class RealEstateCsvExportService {
 
     private final RealEstateCsvConfig csvConfig;
+    private final RealEstateExportValueFormatter valueFormatter;
 
     /**
      * Streams a CSV file with all columns defined in RealEstateCsvConfig,
@@ -78,7 +80,10 @@ public class RealEstateCsvExportService {
                     }
                     try {
                         Object val = accessor.getValue(re);
-                        String cellValue = (val == null) ? "" : escapeCsv(val.toString());
+                        ExportDataType exportType = accessor.getExportType();
+                        RealEstateExportValueFormatter.FormatResult formatted =
+                                valueFormatter.formatValue(fieldName, exportType, val);
+                        String cellValue = escapeCsv(formatted.csvValue());
                         rowValues.add(cellValue);
                     } catch (Exception e) {
                         log.warn("Cannot read field {}: {}", fieldName, e.getMessage());
@@ -107,7 +112,7 @@ public class RealEstateCsvExportService {
             ExportField ann = field.getAnnotation(ExportField.class);
             if (ann != null) {
                 field.setAccessible(true);
-                annotatedAccessors.put(ann.fieldName(), new FieldAccessor(field));
+                annotatedAccessors.put(ann.fieldName(), new FieldAccessor(field, ann.exportType()));
             }
         }
 
@@ -116,7 +121,7 @@ public class RealEstateCsvExportService {
             ExportField ann = method.getAnnotation(ExportField.class);
             if (ann != null) {
                 method.setAccessible(true);
-                annotatedAccessors.put(ann.fieldName(), new MethodAccessor(method));
+                annotatedAccessors.put(ann.fieldName(), new MethodAccessor(method, ann.exportType()));
             }
         }
 
@@ -146,6 +151,8 @@ public class RealEstateCsvExportService {
      */
     private interface AnnotatedAccessor {
         Object getValue(Object instance) throws Exception;
+
+        ExportDataType getExportType();
     }
 
     /**
@@ -153,14 +160,21 @@ public class RealEstateCsvExportService {
      */
     private static class FieldAccessor implements AnnotatedAccessor {
         private final Field field;
+        private final ExportDataType exportType;
 
-        public FieldAccessor(Field field) {
+        public FieldAccessor(Field field, ExportDataType exportType) {
             this.field = field;
+            this.exportType = exportType;
         }
 
         @Override
         public Object getValue(Object instance) throws Exception {
             return field.get(instance);
+        }
+
+        @Override
+        public ExportDataType getExportType() {
+            return exportType;
         }
     }
 
@@ -169,14 +183,21 @@ public class RealEstateCsvExportService {
      */
     private static class MethodAccessor implements AnnotatedAccessor {
         private final Method method;
+        private final ExportDataType exportType;
 
-        public MethodAccessor(Method method) {
+        public MethodAccessor(Method method, ExportDataType exportType) {
             this.method = method;
+            this.exportType = exportType;
         }
 
         @Override
         public Object getValue(Object instance) throws Exception {
             return method.invoke(instance);
+        }
+
+        @Override
+        public ExportDataType getExportType() {
+            return exportType;
         }
     }
 }
